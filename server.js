@@ -315,6 +315,9 @@ io.on('connection', (socket) => {
 
     console.log(`Game ${gameId} restarted, back to lobby`);
 
+    // Sende spezifisches Restart-Event
+    io.to(gameId).emit('gameRestarted');
+
     io.to(gameId).emit('gameState', {
       ...game,
       storytellerIndex: game.storytellerIndex

@@ -175,12 +175,19 @@ function Game({ playerName, gameId }) {
       setPhase('gameEnd');
     };
 
+    const handleGameRestarted = () => {
+      console.log('Game restarted, going back to lobby');
+      // Zurück zur Lobby
+      window.location.reload(); // Einfacher Weg zur Lobby zurückzukehren
+    };
+
     // Event-Listener registrieren
     socket.on('gameStarted', handleGameStarted);
     socket.on('gameState', handleGameState);
     socket.on('cardsReady', handleCardsReady);
     socket.on('roundEnded', handleRoundEnded);
     socket.on('gameEnded', handleGameEnded);
+    socket.on('gameRestarted', handleGameRestarted);
 
     // Cleanup
     return () => {
@@ -189,6 +196,7 @@ function Game({ playerName, gameId }) {
       socket.off('cardsReady', handleCardsReady);
       socket.off('roundEnded', handleRoundEnded);
       socket.off('gameEnded', handleGameEnded);
+      socket.off('gameRestarted', handleGameRestarted);
     };
   }, [gameId, playerName]);
 
@@ -314,6 +322,12 @@ function Game({ playerName, gameId }) {
     setRevealTimer(null);
     setScoreChanges([]);
     setPointsEarned(null);
+    setGame(null);
+    setPhase('waiting');
+    setHand([]);
+    setSelectedCard(null);
+    setHint('');
+    setMixedCards([]);
     socket.emit('restartGame', gameId);
   };
 

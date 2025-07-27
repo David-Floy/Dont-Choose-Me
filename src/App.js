@@ -7,8 +7,17 @@ function App() {
   const [playerName, setPlayerName] = useState('');
   const [gameStarted, setGameStarted] = useState(false);
 
+  // Funktion um zurück zur Lobby zu gehen
+  const handleBackToLobby = () => {
+    setGameStarted(false);
+  };
+
   if (gameStarted) {
-    return <Game playerName={playerName} gameId={gameId} />;
+    return <Game
+      playerName={playerName}
+      gameId={gameId}
+      onBackToLobby={handleBackToLobby}
+    />;
   }
 
   return (

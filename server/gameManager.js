@@ -150,7 +150,10 @@ class GameManager {
     game.deck = this.shuffle([...cards]); // Kopie erstellen um Original nicht zu verändern
     game.state = 'playing';
     game.round = 1;
-    game.storytellerIndex = 0;
+
+    // Zufälligen ersten Erzähler auswählen
+    game.storytellerIndex = Math.floor(Math.random() * game.players.length);
+
     game.hint = '';
     game.storytellerCard = null;
     game.selectedCards = [];
@@ -184,7 +187,7 @@ class GameManager {
     }
 
     console.log(`=== GAME ${gameId} STARTED ===`);
-    console.log(`Initial storyteller: ${game.players[game.storytellerIndex].name}`);
+    console.log(`Random storyteller selected: ${game.players[game.storytellerIndex].name} (index ${game.storytellerIndex})`);
     console.log(`Final deck size: ${game.deck.length}`);
     console.log(`Cards distributed: ${allHandCards.length}, Unique cards: ${uniqueCardIds.length}`);
 
