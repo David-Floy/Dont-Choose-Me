@@ -12,6 +12,11 @@ function App() {
     setGameStarted(false);
   };
 
+  // Debug-Konsole für Vercel
+  React.useEffect(() => {
+    console.log('App mounted successfully');
+  }, []);
+
   if (gameStarted) {
     return <Game
       playerName={playerName}
