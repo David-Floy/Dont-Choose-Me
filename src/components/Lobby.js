@@ -17,16 +17,38 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
       onGameStart();
     };
 
+    const handleJoinError = ({ error }) => {
+      setError(error);
+      setIsInLobby(false);
+    };
+
+    const handleJoinSuccess = ({ gameId: validatedGameId, playerName: validatedPlayerName }) => {
+      setGameId(validatedGameId);
+      setPlayerName(validatedPlayerName);
+      setError('');
+    };
+
+    const handleStartGameError = ({ error }) => {
+      setError(error);
+    };
+
     socket.on('lobbyUpdate', handleLobbyUpdate);
     socket.on('gameStarted', handleGameStarted);
+    socket.on('joinError', handleJoinError);
+    socket.on('joinSuccess', handleJoinSuccess);
+    socket.on('startGameError', handleStartGameError);
 
     return () => {
       socket.off('lobbyUpdate', handleLobbyUpdate);
       socket.off('gameStarted', handleGameStarted);
+      socket.off('joinError', handleJoinError);
+      socket.off('joinSuccess', handleJoinSuccess);
+      socket.off('startGameError', handleStartGameError);
     };
   }, [onGameStart]);
 
   const handleJoinLobby = () => {
+    // Client-seitige Vorvalidierung (für bessere UX)
     if (!playerName.trim()) {
       setError('Bitte gib einen Spielernamen ein!');
       return;
@@ -36,16 +58,51 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
       return;
     }
 
+    if (playerName.trim().length < 2) {
+      setError('Spielername muss mindestens 2 Zeichen lang sein!');
+      return;
+    }
+
+    if (playerName.trim().length > 20) {
+      setError('Spielername darf maximal 20 Zeichen lang sein!');
+      return;
+    }
+
+    if (gameId.trim().length < 2) {
+      setError('Raum-ID muss mindestens 2 Zeichen lang sein!');
+      return;
+    }
+
+    if (gameId.trim().length > 15) {
+      setError('Raum-ID darf maximal 15 Zeichen lang sein!');
+      return;
+    }
+
+    // Prüfe auf erlaubte Zeichen für Spielername
+    if (!/^[a-zA-ZäöüÄÖÜß0-9\s]+$/.test(playerName.trim())) {
+      setError('Spielername darf nur Buchstaben, Zahlen und Leerzeichen enthalten!');
+      return;
+    }
+
+    // Prüfe auf erlaubte Zeichen für Raum-ID
+    if (!/^[a-zA-Z0-9_-]+$/.test(gameId.trim())) {
+      setError('Raum-ID darf nur Buchstaben, Zahlen, Bindestriche und Unterstriche enthalten!');
+      return;
+    }
+
     setError('');
     socket.emit('joinLobby', { playerName: playerName.trim(), gameId: gameId.trim() });
     setIsInLobby(true);
   };
 
   const handleStartGame = () => {
+    // Client-seitige Vorvalidierung
     if (players.length < 3) {
       setError('Mindestens 3 Spieler werden benötigt!');
       return;
     }
+
+    setError('');
     socket.emit('startGame', gameId);
   };
 
@@ -53,6 +110,9 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
     setIsInLobby(false);
     setPlayers([]);
     setError('');
+
+    // Sende disconnect event und verlasse den Socket-Raum
+    socket.emit('leaveLobby', { gameId, playerName });
   };
 
   if (!isInLobby) {

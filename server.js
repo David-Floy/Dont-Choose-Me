@@ -71,29 +71,119 @@ io.on('connection', (socket) => {
    * Spieler tritt Lobby bei
    */
   socket.on('joinLobby', ({ playerName, gameId }) => {
-    console.log(`${playerName} joins lobby ${gameId}`);
+    console.log(`Join lobby request: ${playerName} -> ${gameId} (${socket.id})`);
 
-    const game = gameManager.addPlayer(gameId, socket.id, playerName);
-    socket.join(gameId);
+    // Validiere Spielername
+    const playerValidation = validatePlayerName(playerName);
+    if (!playerValidation.isValid) {
+      console.log(`Invalid player name from ${socket.id}: ${playerValidation.error}`);
+      socket.emit('joinError', { error: playerValidation.error });
+      return;
+    }
 
-    io.to(gameId).emit('lobbyUpdate', game.players);
+    // Validiere Raum-ID
+    const gameValidation = validateGameId(gameId);
+    if (!gameValidation.isValid) {
+      console.log(`Invalid game ID from ${socket.id}: ${gameValidation.error}`);
+      socket.emit('joinError', { error: gameValidation.error });
+      return;
+    }
+
+    const validatedPlayerName = playerValidation.playerName;
+    const validatedGameId = gameValidation.gameId;
+
+    // Prüfe ob Spielername bereits vergeben ist
+    const existingGame = gameManager.getGame(validatedGameId);
+    if (existingGame && isPlayerNameTaken(existingGame, validatedPlayerName, socket.id)) {
+      console.log(`Player name already taken: ${validatedPlayerName} in game ${validatedGameId}`);
+      socket.emit('joinError', { error: 'Dieser Spielername ist bereits vergeben' });
+      return;
+    }
+
+    // Prüfe ob Spiel bereits läuft und Spieler nicht bereits drin ist
+    if (existingGame && existingGame.state === 'playing') {
+      const existingPlayer = existingGame.players.find(p => p.name === validatedPlayerName);
+      if (!existingPlayer) {
+        console.log(`Game already running, cannot add new player: ${validatedPlayerName}`);
+        socket.emit('joinError', { error: 'Das Spiel läuft bereits. Du kannst nicht mehr beitreten.' });
+        return;
+      }
+    }
+
+    try {
+      const game = gameManager.addPlayer(validatedGameId, socket.id, validatedPlayerName);
+      socket.join(validatedGameId);
+
+      console.log(`${validatedPlayerName} successfully joined lobby ${validatedGameId}`);
+      io.to(validatedGameId).emit('lobbyUpdate', game.players);
+
+      // Bestätige erfolgreichen Beitritt
+      socket.emit('joinSuccess', {
+        gameId: validatedGameId,
+        playerName: validatedPlayerName
+      });
+    } catch (error) {
+      console.error(`Error adding player to game:`, error);
+      socket.emit('joinError', { error: 'Fehler beim Beitreten des Spiels' });
+    }
   });
 
   /**
    * Spiel starten
    */
   socket.on('startGame', (gameId) => {
-    console.log(`Starting game ${gameId}`);
+    console.log(`Start game request for ${gameId} from ${socket.id}`);
 
-    const game = gameManager.startGame(gameId, cards);
-    if (!game) {
-      console.log(`Failed to start game ${gameId} - insufficient players`);
+    // Validiere Raum-ID
+    const gameValidation = validateGameId(gameId);
+    if (!gameValidation.isValid) {
+      console.log(`Invalid game ID for start: ${gameValidation.error}`);
+      socket.emit('startGameError', { error: gameValidation.error });
       return;
     }
 
-    io.to(gameId).emit('gameStarted', {
-      ...game,
-      storytellerIndex: game.storytellerIndex
+    const validatedGameId = gameValidation.gameId;
+    const game = gameManager.getGame(validatedGameId);
+
+    if (!game) {
+      console.log(`Game not found for start: ${validatedGameId}`);
+      socket.emit('startGameError', { error: 'Spiel nicht gefunden' });
+      return;
+    }
+
+    // Prüfe ob der anfragende Spieler im Spiel ist
+    const requestingPlayer = game.players.find(p => p.id === socket.id);
+    if (!requestingPlayer) {
+      console.log(`Unauthorized start game request from ${socket.id}`);
+      socket.emit('startGameError', { error: 'Du bist nicht berechtigt, das Spiel zu starten' });
+      return;
+    }
+
+    // Prüfe Mindestanzahl Spieler
+    if (game.players.length < 3) {
+      console.log(`Not enough players to start game ${validatedGameId}: ${game.players.length}`);
+      socket.emit('startGameError', { error: 'Mindestens 3 Spieler werden benötigt' });
+      return;
+    }
+
+    // Prüfe ob Spiel bereits läuft
+    if (game.state === 'playing') {
+      console.log(`Game already running: ${validatedGameId}`);
+      socket.emit('startGameError', { error: 'Das Spiel läuft bereits' });
+      return;
+    }
+
+    const startedGame = gameManager.startGame(validatedGameId, cards);
+    if (!startedGame) {
+      console.log(`Failed to start game ${validatedGameId}`);
+      socket.emit('startGameError', { error: 'Fehler beim Starten des Spiels' });
+      return;
+    }
+
+    console.log(`Game ${validatedGameId} started successfully`);
+    io.to(validatedGameId).emit('gameStarted', {
+      ...startedGame,
+      storytellerIndex: startedGame.storytellerIndex
     });
   });
 
@@ -158,63 +248,76 @@ io.on('connection', (socket) => {
    * Erzähler gibt Hinweis
    */
   socket.on('giveHint', ({ gameId, cardId, hint }) => {
-    console.log(`Hint given in game ${gameId}: "${hint}" by socket ${socket.id}`);
+    console.log(`Give hint request: ${hint} (card: ${cardId}) from ${socket.id}`);
 
-    const game = gameManager.getGame(gameId);
-    if (!game) return;
-
-    // Validierungen
-    if (game.hint && game.hint !== '') {
-      console.log(`Hint already given in game ${gameId}, ignoring new hint`);
+    // Validiere Raum-ID
+    const gameValidation = validateGameId(gameId);
+    if (!gameValidation.isValid) {
+      console.log(`Invalid game ID for hint: ${gameValidation.error}`);
       return;
     }
 
-    // Finde den aktuellen Spieler basierend auf Socket-ID
+    // Validiere Hinweis
+    if (!hint || typeof hint !== 'string') {
+      console.log(`Invalid hint from ${socket.id}: empty or not string`);
+      return;
+    }
+
+    const trimmedHint = hint.trim();
+    if (trimmedHint.length === 0) {
+      console.log(`Empty hint from ${socket.id}`);
+      return;
+    }
+
+    if (trimmedHint.length > 100) {
+      console.log(`Hint too long from ${socket.id}: ${trimmedHint.length} characters`);
+      return;
+    }
+
+    // Validiere Karten-ID
+    if (!cardId || (typeof cardId !== 'string' && typeof cardId !== 'number')) {
+      console.log(`Invalid card ID from ${socket.id}: ${cardId}`);
+      return;
+    }
+
+    const game = gameManager.getGame(gameValidation.gameId);
+    if (!game) return;
+
+    // Weitere Validierungen wie zuvor...
+    if (game.hint && game.hint !== '') {
+      console.log(`Hint already given in game ${gameValidation.gameId}, ignoring new hint`);
+      return;
+    }
+
     const currentPlayer = game.players.find(p => p.id === socket.id);
     if (!currentPlayer) {
-      console.log(`Player not found for socket ${socket.id} in game ${gameId}`);
+      console.log(`Player not found for socket ${socket.id} in game ${gameValidation.gameId}`);
       return;
     }
 
     const currentStoryteller = game.players[game.storytellerIndex];
     if (!currentStoryteller || currentStoryteller.name !== currentPlayer.name) {
-      console.log(`Non-storyteller tried to give hint in game ${gameId}. Expected: ${currentStoryteller?.name}, Got: ${currentPlayer.name}`);
+      console.log(`Non-storyteller tried to give hint in game ${gameValidation.gameId}`);
       return;
     }
 
-    // Zusätzliche Validierung: Prüfe ob Erzähler die Karte wirklich hat
-    const hasCard = currentPlayer.hand.find(c => c.id === cardId);
+    const hasCard = currentPlayer.hand.find(c => c.id == cardId);
     if (!hasCard) {
       console.error(`Storyteller ${currentPlayer.name} tried to play card ${cardId} but doesn't have it!`);
-      console.error(`Storyteller's hand: ${currentPlayer.hand.map(c => c.id).join(', ')}`);
       return;
     }
 
     // Hinweis setzen und Karte entfernen
-    game.hint = hint;
+    game.hint = trimmedHint;
     game.storytellerCard = cardId;
     game.selectedCards = [{ cardId, playerId: socket.id }];
     game.phase = 'selectCards';
     game.votes = [];
 
-    // Karte aus Hand entfernen
-    currentPlayer.hand = currentPlayer.hand.filter(card => card.id !== cardId);
+    currentPlayer.hand = currentPlayer.hand.filter(card => card.id != cardId);
     console.log(`Storyteller ${currentPlayer.name} played card ${cardId}. Hand now has ${currentPlayer.hand.length} cards.`);
 
-    // Debug: Alle Spieler-Hände detailliert loggen
-    console.log('=== DETAILED HAND DEBUG AFTER HINT ===');
-    game.players.forEach((p, index) => {
-      console.log(`Player ${index}: ${p.name} (${p.id})`);
-      console.log(`  Hand size: ${p.hand?.length || 0}`);
-      console.log(`  Hand IDs: ${p.hand?.map(c => c.id).join(', ') || 'empty'}`);
-      console.log(`  Is storyteller: ${index === game.storytellerIndex}`);
-    });
-    console.log('=== END HAND DEBUG ===');
-
-    console.log(`Game state after hint - Phase: ${game.phase}, Selected cards: ${game.selectedCards.length}`);
-
-    // Sende vollständigen Spielzustand an alle Clients
-    io.to(gameId).emit('gameState', {
+    io.to(gameValidation.gameId).emit('gameState', {
       ...game,
       storytellerIndex: game.storytellerIndex
     });
@@ -379,6 +482,35 @@ io.on('connection', (socket) => {
   });
 
   /**
+   * Spieler verlässt Lobby
+   */
+  socket.on('leaveLobby', ({ gameId, playerName }) => {
+    console.log(`Player ${playerName} leaving lobby ${gameId}`);
+
+    const game = gameManager.getGame(gameId);
+    if (game) {
+      // Entferne Spieler aus dem Spiel
+      const playerIndex = game.players.findIndex(p => p.id === socket.id);
+      if (playerIndex !== -1) {
+        game.players.splice(playerIndex, 1);
+        console.log(`Removed player ${playerName} from game ${gameId}`);
+
+        // Verlasse den Socket-Raum
+        socket.leave(gameId);
+
+        // Sende Update an alle verbleibenden Spieler
+        io.to(gameId).emit('lobbyUpdate', game.players);
+
+        // Lösche Spiel wenn keine Spieler mehr da sind
+        if (game.players.length === 0) {
+          gameManager.removeGame(gameId);
+          console.log(`Deleted empty game ${gameId}`);
+        }
+      }
+    }
+  });
+
+  /**
    * Client-Verbindung getrennt
    */
   socket.on('disconnect', () => {
@@ -397,6 +529,89 @@ io.on('connection', (socket) => {
 });
 
 // === UTILITY FUNCTIONS ===
+
+/**
+ * Validiert einen Spielernamen
+ * @param {string} playerName - Der zu validierende Spielername
+ * @returns {Object} { isValid: boolean, error?: string }
+ */
+function validatePlayerName(playerName) {
+  if (!playerName || typeof playerName !== 'string') {
+    return { isValid: false, error: 'Spielername ist erforderlich' };
+  }
+
+  const trimmedName = playerName.trim();
+
+  if (trimmedName.length === 0) {
+    return { isValid: false, error: 'Spielername darf nicht leer sein' };
+  }
+
+  if (trimmedName.length < 2) {
+    return { isValid: false, error: 'Spielername muss mindestens 2 Zeichen lang sein' };
+  }
+
+  if (trimmedName.length > 20) {
+    return { isValid: false, error: 'Spielername darf maximal 20 Zeichen lang sein' };
+  }
+
+  // Prüfe auf erlaubte Zeichen (Buchstaben, Zahlen, Leerzeichen, Umlaute)
+  if (!/^[a-zA-ZäöüÄÖÜß0-9\s]+$/.test(trimmedName)) {
+    return { isValid: false, error: 'Spielername darf nur Buchstaben, Zahlen und Leerzeichen enthalten' };
+  }
+
+  // Prüfe auf aufeinanderfolgende Leerzeichen
+  if (/\s{2,}/.test(trimmedName)) {
+    return { isValid: false, error: 'Spielername darf keine aufeinanderfolgenden Leerzeichen enthalten' };
+  }
+
+  return { isValid: true, playerName: trimmedName };
+}
+
+/**
+ * Validiert eine Raum-ID
+ * @param {string} gameId - Die zu validierende Raum-ID
+ * @returns {Object} { isValid: boolean, error?: string }
+ */
+function validateGameId(gameId) {
+  if (!gameId || typeof gameId !== 'string') {
+    return { isValid: false, error: 'Raum-ID ist erforderlich' };
+  }
+
+  const trimmedId = gameId.trim();
+
+  if (trimmedId.length === 0) {
+    return { isValid: false, error: 'Raum-ID darf nicht leer sein' };
+  }
+
+  if (trimmedId.length < 2) {
+    return { isValid: false, error: 'Raum-ID muss mindestens 2 Zeichen lang sein' };
+  }
+
+  if (trimmedId.length > 15) {
+    return { isValid: false, error: 'Raum-ID darf maximal 15 Zeichen lang sein' };
+  }
+
+  // Prüfe auf erlaubte Zeichen (Buchstaben, Zahlen, Bindestrich, Unterstrich)
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmedId)) {
+    return { isValid: false, error: 'Raum-ID darf nur Buchstaben, Zahlen, Bindestriche und Unterstriche enthalten' };
+  }
+
+  return { isValid: true, gameId: trimmedId };
+}
+
+/**
+ * Prüft ob ein Spielername in einem Spiel bereits existiert
+ * @param {Object} game - Das Spielobjekt
+ * @param {string} playerName - Der zu prüfende Spielername
+ * @param {string} excludeSocketId - Socket-ID die ausgeschlossen werden soll (für Updates)
+ * @returns {boolean} True wenn Name bereits existiert
+ */
+function isPlayerNameTaken(game, playerName, excludeSocketId = null) {
+  return game.players.some(player =>
+    player.name.toLowerCase() === playerName.toLowerCase() &&
+    player.id !== excludeSocketId
+  );
+}
 
 /**
  * Mischt ein Array zufällig (Fisher-Yates Shuffle)

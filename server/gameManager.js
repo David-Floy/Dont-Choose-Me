@@ -39,6 +39,20 @@ class GameManager {
   addPlayer(gameId, socketId, playerName) {
     const game = this.getOrCreateGame(gameId);
 
+    // Zusätzliche Validierung auf GameManager-Ebene
+    if (!playerName || typeof playerName !== 'string' || playerName.trim().length === 0) {
+      throw new Error('Ungültiger Spielername');
+    }
+
+    if (!socketId || typeof socketId !== 'string') {
+      throw new Error('Ungültige Socket-ID');
+    }
+
+    // Prüfe Spieler-Limit (maximal 8 Spieler)
+    if (game.players.length >= 8) {
+      throw new Error('Maximale Spieleranzahl erreicht (8 Spieler)');
+    }
+
     // Prüfe ob ein Spieler mit diesem Namen bereits existiert
     const existingPlayer = game.players.find(p => p.name === playerName);
 
@@ -123,6 +137,17 @@ class GameManager {
   }
 
   /**
+   * Entfernt ein komplettes Spiel
+   * @param {string} gameId - Die Spiel-ID des zu entfernenden Spiels
+   */
+  removeGame(gameId) {
+    if (this.games[gameId]) {
+      delete this.games[gameId];
+      console.log(`Game ${gameId} removed from memory`);
+    }
+  }
+
+  /**
    * Startet ein Spiel
    * @param {string} gameId - Die Spiel-ID
    * @param {Array} cards - Array aller verfügbaren Karten
@@ -131,7 +156,23 @@ class GameManager {
   startGame(gameId, cards) {
     const game = this.games[gameId];
 
-    if (!game || game.players.length < 2) {
+    if (!game) {
+      console.error(`Game not found: ${gameId}`);
+      return null;
+    }
+
+    if (game.players.length < 3) {
+      console.error(`Not enough players: ${game.players.length}`);
+      return null;
+    }
+
+    if (game.players.length > 8) {
+      console.error(`Too many players: ${game.players.length}`);
+      return null;
+    }
+
+    if (game.state === 'playing') {
+      console.error(`Game already running: ${gameId}`);
       return null;
     }
 
