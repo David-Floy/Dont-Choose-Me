@@ -486,7 +486,7 @@ io.on('connection', (socket) => {
    */
   socket.on('leaveLobby', ({ gameId, playerName }) => {
     console.log(`Player ${playerName} leaving lobby ${gameId}`);
-
+    
     const game = gameManager.getGame(gameId);
     if (game) {
       // Entferne Spieler aus dem Spiel
@@ -494,13 +494,13 @@ io.on('connection', (socket) => {
       if (playerIndex !== -1) {
         game.players.splice(playerIndex, 1);
         console.log(`Removed player ${playerName} from game ${gameId}`);
-
+        
         // Verlasse den Socket-Raum
         socket.leave(gameId);
-
+        
         // Sende Update an alle verbleibenden Spieler
         io.to(gameId).emit('lobbyUpdate', game.players);
-
+        
         // Lösche Spiel wenn keine Spieler mehr da sind
         if (game.players.length === 0) {
           gameManager.removeGame(gameId);

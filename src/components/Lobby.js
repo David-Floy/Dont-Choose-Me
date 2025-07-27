@@ -1,53 +1,74 @@
 import React, { useEffect, useState } from 'react';
-import io from 'socket.io-client';
-
-const socket = io('http://localhost:3001', { autoConnect: true });
 
 function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   const [players, setPlayers] = useState([]);
   const [isInLobby, setIsInLobby] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Funktion zum Laden der aktuellen Lobby-Daten
+  const loadLobbyData = async () => {
+    if (!isInLobby || !gameId) return;
+
+    try {
+      const response = await fetch(`/api/lobby.php?gameId=${encodeURIComponent(gameId)}`);
+      const data = await response.json();
+      if (data.success) {
+        setPlayers(data.players || []);
+        setError('');
+      } else {
+        setError(data.error || 'Fehler beim Laden der Lobby');
+      }
+    } catch (err) {
+      console.error('Lobby-Update fehlgeschlagen:', err);
+      setError('Verbindungsfehler beim Laden der Lobby');
+    }
+  };
+
+  // Regelmäßige Updates der Lobby alle 2 Sekunden
   useEffect(() => {
-    const handleLobbyUpdate = (playerList) => {
-      setPlayers(playerList);
-    };
+    let interval;
+    if (isInLobby && gameId) {
+      // Sofortiges erstes Update
+      loadLobbyData();
 
-    const handleGameStarted = () => {
-      onGameStart();
-    };
-
-    const handleJoinError = ({ error }) => {
-      setError(error);
-      setIsInLobby(false);
-    };
-
-    const handleJoinSuccess = ({ gameId: validatedGameId, playerName: validatedPlayerName }) => {
-      setGameId(validatedGameId);
-      setPlayerName(validatedPlayerName);
-      setError('');
-    };
-
-    const handleStartGameError = ({ error }) => {
-      setError(error);
-    };
-
-    socket.on('lobbyUpdate', handleLobbyUpdate);
-    socket.on('gameStarted', handleGameStarted);
-    socket.on('joinError', handleJoinError);
-    socket.on('joinSuccess', handleJoinSuccess);
-    socket.on('startGameError', handleStartGameError);
+      // Dann alle 2 Sekunden aktualisieren
+      interval = setInterval(loadLobbyData, 2000);
+    }
 
     return () => {
-      socket.off('lobbyUpdate', handleLobbyUpdate);
-      socket.off('gameStarted', handleGameStarted);
-      socket.off('joinError', handleJoinError);
-      socket.off('joinSuccess', handleJoinSuccess);
-      socket.off('startGameError', handleStartGameError);
+      if (interval) {
+        clearInterval(interval);
+      }
     };
-  }, [onGameStart]);
+  }, [isInLobby, gameId]);
 
-  const handleJoinLobby = () => {
+  // Prüfe auf Spielstart alle 3 Sekunden
+  useEffect(() => {
+    let gameCheckInterval;
+    if (isInLobby && gameId) {
+      gameCheckInterval = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/game.php?gameId=${encodeURIComponent(gameId)}&playerName=${encodeURIComponent(playerName)}`);
+          const gameData = await response.json();
+          if (gameData && gameData.state === 'playing') {
+            console.log('Spiel wurde gestartet, wechsle zur Spielansicht');
+            onGameStart();
+          }
+        } catch (err) {
+          console.error('Spielstart-Check fehlgeschlagen:', err);
+        }
+      }, 3000);
+    }
+
+    return () => {
+      if (gameCheckInterval) {
+        clearInterval(gameCheckInterval);
+      }
+    };
+  }, [isInLobby, gameId, playerName, onGameStart]);
+
+  const handleJoinLobby = async () => {
     // Client-seitige Vorvalidierung (für bessere UX)
     if (!playerName.trim()) {
       setError('Bitte gib einen Spielernamen ein!');
@@ -91,11 +112,32 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
     }
 
     setError('');
-    socket.emit('joinLobby', { playerName: playerName.trim(), gameId: gameId.trim() });
-    setIsInLobby(true);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/lobby.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'join', playerName: playerName.trim(), gameId: gameId.trim() })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setIsInLobby(true);
+        setPlayers(data.players || []);
+        console.log('Erfolgreich Lobby beigetreten:', data.players);
+      } else {
+        setError(data.error || 'Fehler beim Beitreten');
+      }
+    } catch (err) {
+      console.error('Lobby-Beitritt fehlgeschlagen:', err);
+      setError('Verbindungsfehler beim Beitreten');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleStartGame = () => {
+  const handleStartGame = async () => {
     // Client-seitige Vorvalidierung
     if (players.length < 3) {
       setError('Mindestens 3 Spieler werden benötigt!');
@@ -103,16 +145,47 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
     }
 
     setError('');
-    socket.emit('startGame', gameId);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/game.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start', gameId, playerName })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        console.log('Spiel gestartet');
+        // Kurz warten, dann zur Spielansicht wechseln
+        setTimeout(() => {
+          onGameStart();
+        }, 1000);
+      } else {
+        setError(data.error || 'Fehler beim Spielstart');
+      }
+    } catch (err) {
+      console.error('Spielstart fehlgeschlagen:', err);
+      setError('Verbindungsfehler beim Spielstart');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleLeaveLobby = () => {
+  const handleLeaveLobby = async () => {
+    try {
+      await fetch('/api/lobby.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'leave', playerName, gameId })
+      });
+    } catch (err) {
+      console.error('Lobby verlassen fehlgeschlagen:', err);
+    }
+
     setIsInLobby(false);
     setPlayers([]);
     setError('');
-
-    // Sende disconnect event und verlasse den Socket-Raum
-    socket.emit('leaveLobby', { gameId, playerName });
   };
 
   if (!isInLobby) {
@@ -215,30 +288,37 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
 
           <button
             onClick={handleJoinLobby}
+            disabled={isLoading}
             style={{
               width: '100%',
               padding: '16px 24px',
               fontSize: '18px',
               fontWeight: 'bold',
-              background: 'linear-gradient(135deg, #00c6ff, #0072ff)',
+              background: isLoading
+                ? 'linear-gradient(135deg, #6c757d, #5a6268)'
+                : 'linear-gradient(135deg, #00c6ff, #0072ff)',
               color: 'white',
               border: 'none',
               borderRadius: '12px',
-              cursor: 'pointer',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
               boxShadow: '0 6px 20px rgba(0,114,255,0.3)',
               transition: 'all 0.3s ease',
               textShadow: '1px 1px 2px rgba(0,0,0,0.2)'
             }}
             onMouseOver={(e) => {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 8px 25px rgba(0,114,255,0.4)';
+              if (!isLoading) {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 25px rgba(0,114,255,0.4)';
+              }
             }}
             onMouseOut={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 6px 20px rgba(0,114,255,0.3)';
+              if (!isLoading) {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 6px 20px rgba(0,114,255,0.3)';
+              }
             }}
           >
-            🚀 Raum beitreten
+            {isLoading ? '⏳ Beitrete...' : '🚀 Raum beitreten'}
           </button>
         </div>
 
@@ -293,7 +373,7 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
 
   return (
     <div>
-      {/* Lobby Header */}
+      {/* Lobby Header mit Live-Status */}
       <div style={{
         background: 'rgba(255,255,255,0.1)',
         borderRadius: '16px',
@@ -315,11 +395,11 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
           margin: 0,
           fontSize: '16px'
         }}>
-          Warte auf weitere Spieler...
+          {isLoading ? '🔄 Aktualisiere...' : 'Warte auf weitere Spieler...'}
         </p>
       </div>
 
-      {/* Players List */}
+      {/* Players List mit verbesserter Anzeige */}
       <div style={{
         background: 'rgba(255,255,255,0.1)',
         borderRadius: '16px',
@@ -334,50 +414,73 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
           textAlign: 'center',
           textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
         }}>
-          👥 Spieler ({players.length})
+          👥 Spieler ({players.length}) {isLoading && '🔄'}
         </h3>
 
-        <div style={{
-          display: 'grid',
-          gap: '12px',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))'
-        }}>
-          {players.map((player, index) => (
-            <div key={player.id} style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1))',
-              padding: '16px',
-              borderRadius: '12px',
-              border: '1px solid rgba(255,255,255,0.3)',
-              textAlign: 'center',
-              backdropFilter: 'blur(10px)'
-            }}>
-              <div style={{
-                fontSize: '24px',
-                marginBottom: '8px'
+        {players.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: '16px',
+            padding: '20px'
+          }}>
+            Keine Spieler in der Lobby...
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gap: '12px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))'
+          }}>
+            {players.map((player, index) => (
+              <div key={`${player.id}-${index}`} style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1))',
+                padding: '16px',
+                borderRadius: '12px',
+                border: player.name === playerName
+                  ? '2px solid #00c6ff'
+                  : '1px solid rgba(255,255,255,0.3)',
+                textAlign: 'center',
+                backdropFilter: 'blur(10px)'
               }}>
-                {index === 0 ? '👑' : '🎮'}
-              </div>
-              <div style={{
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '16px',
-                textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
-              }}>
-                {player.name}
-              </div>
-              {index === 0 && (
                 <div style={{
-                  color: 'rgba(255,215,0,0.9)',
-                  fontSize: '12px',
-                  marginTop: '4px',
-                  fontWeight: 'bold'
+                  fontSize: '24px',
+                  marginBottom: '8px'
                 }}>
-                  Raumleiter
+                  {player.name === playerName ? '👤' : index === 0 ? '👑' : '🎮'}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+                <div style={{
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '16px',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
+                }}>
+                  {player.name}
+                </div>
+                {player.name === playerName && (
+                  <div style={{
+                    color: '#00c6ff',
+                    fontSize: '12px',
+                    marginTop: '4px',
+                    fontWeight: 'bold'
+                  }}>
+                    Das bist du
+                  </div>
+                )}
+                {index === 0 && player.name !== playerName && (
+                  <div style={{
+                    color: 'rgba(255,215,0,0.9)',
+                    fontSize: '12px',
+                    marginTop: '4px',
+                    fontWeight: 'bold'
+                  }}>
+                    Raumleiter
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Minimum Players Notice */}
         {players.length < 3 && (
@@ -417,48 +520,50 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
         </div>
       )}
 
-      {/* Action Buttons */}
+      {/* Action Buttons mit Loading-Status */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
         <button
           onClick={handleStartGame}
-          disabled={players.length < 3}
+          disabled={players.length < 3 || isLoading}
           style={{
             flex: '1',
             minWidth: '200px',
             padding: '16px 24px',
             fontSize: '18px',
             fontWeight: 'bold',
-            background: players.length >= 3
+            background: (players.length >= 3 && !isLoading)
               ? 'linear-gradient(135deg, #00c851, #00a845)'
               : 'linear-gradient(135deg, #6c757d, #5a6268)',
             color: 'white',
             border: 'none',
             borderRadius: '12px',
-            cursor: players.length >= 3 ? 'pointer' : 'not-allowed',
-            boxShadow: players.length >= 3
+            cursor: (players.length >= 3 && !isLoading) ? 'pointer' : 'not-allowed',
+            boxShadow: (players.length >= 3 && !isLoading)
               ? '0 6px 20px rgba(0,200,81,0.3)'
               : '0 4px 12px rgba(108,117,125,0.3)',
             transition: 'all 0.3s ease',
             textShadow: '1px 1px 2px rgba(0,0,0,0.2)'
           }}
           onMouseOver={(e) => {
-            if (players.length >= 3) {
+            if (players.length >= 3 && !isLoading) {
               e.target.style.transform = 'translateY(-2px)';
               e.target.style.boxShadow = '0 8px 25px rgba(0,200,81,0.4)';
             }
           }}
           onMouseOut={(e) => {
-            if (players.length >= 3) {
+            if (players.length >= 3 && !isLoading) {
               e.target.style.transform = 'translateY(0)';
               e.target.style.boxShadow = '0 6px 20px rgba(0,200,81,0.3)';
             }
           }}
         >
-          {players.length >= 3 ? '🎮 Spiel starten!' : `⏳ ${3 - players.length} Spieler fehlen`}
+          {isLoading ? '⏳ Starte...' :
+           players.length >= 3 ? '🎮 Spiel starten!' : `⏳ ${3 - players.length} Spieler fehlen`}
         </button>
 
         <button
           onClick={handleLeaveLobby}
+          disabled={isLoading}
           style={{
             padding: '16px 24px',
             fontSize: '16px',
@@ -467,7 +572,7 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
             color: 'white',
             border: '2px solid rgba(255,255,255,0.3)',
             borderRadius: '12px',
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s ease',
             backdropFilter: 'blur(10px)'
           }}

@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import io from 'socket.io-client';
 import Card from './Card';
-
-const socket = io('http://localhost:3001', { autoConnect: true });
 
 /**
  * Haupt-Spielkomponente für das PicMe-Spiel
@@ -280,9 +277,14 @@ function Game({ playerName, gameId }) {
     }
 
     console.log('Giving hint:', hint, 'with card:', selectedCard, 'as player:', playerName);
-    socket.emit('giveHint', { gameId, cardId: selectedCard, hint: hint.trim() });
-    setSelectedCard(null);
-    setHint('');
+    fetch('/api/game.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'giveHint', gameId, playerName, cardId: selectedCard, hint: hint.trim() })
+    }).then(() => {
+      setSelectedCard(null);
+      setHint('');
+    });
   };
 
   /**
@@ -290,8 +292,11 @@ function Game({ playerName, gameId }) {
    * @param {string} cardId - ID der ausgewählten Karte
    */
   const handleChooseCard = (cardId) => {
-    socket.emit('chooseCard', { gameId, cardId });
-    setSelectedCard(cardId);
+    fetch('/api/game.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'chooseCard', gameId, playerName, cardId })
+    }).then(() => setSelectedCard(cardId));
   };
 
   /**
@@ -299,36 +304,48 @@ function Game({ playerName, gameId }) {
    * @param {string} cardId - ID der Karte, für die gestimmt wird
    */
   const handleVote = (cardId) => {
-    socket.emit('voteCard', { gameId, cardId });
+    fetch('/api/game.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'voteCard', gameId, playerName, cardId })
+    });
   };
 
   /**
    * Behandelt den Übergang zur nächsten Runde
    */
   const handleContinueToNextRound = () => {
-    console.log('Requesting continue to next round');
-    setRevealInfo(null); // Reset reveal info beim Übergang
-    setRevealTimer(null); // Reset timer
-    socket.emit('continueToNextRound', gameId);
+    fetch('/api/game.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'continueToNextRound', gameId })
+    }).then(() => {
+      setRevealInfo(null);
+      setRevealTimer(null);
+    });
   };
 
   /**
    * Behandelt den Neustart des Spiels
    */
   const handleRestartGame = () => {
-    console.log('Requesting game restart');
-    setGameWinner(null);
-    setRevealInfo(null);
-    setRevealTimer(null);
-    setScoreChanges([]);
-    setPointsEarned(null);
-    setGame(null);
-    setPhase('waiting');
-    setHand([]);
-    setSelectedCard(null);
-    setHint('');
-    setMixedCards([]);
-    socket.emit('restartGame', gameId);
+    fetch('/api/game.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'restartGame', gameId })
+    }).then(() => {
+      setGameWinner(null);
+      setRevealInfo(null);
+      setRevealTimer(null);
+      setScoreChanges([]);
+      setPointsEarned(null);
+      setGame(null);
+      setPhase('waiting');
+      setHand([]);
+      setSelectedCard(null);
+      setHint('');
+      setMixedCards([]);
+    });
   };
 
   /**

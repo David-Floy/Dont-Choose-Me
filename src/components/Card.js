@@ -34,7 +34,7 @@ function Card({ card, onClick, selected, style = {} }) {
       }}
     >
       <img
-        src={`http://localhost:3001${card.image}`}
+        src={`${card.image}`}
         alt={card.title || `Card ${card.id}`}
         style={{
           width: '250px',

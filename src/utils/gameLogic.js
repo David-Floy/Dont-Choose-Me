@@ -75,4 +75,3 @@ export function validateGameState(game) {
 
   return true;
 }
-
