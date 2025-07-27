@@ -1,35 +1,57 @@
 import React, { useEffect, useState } from 'react';
 
+const API_BASE = '/api';
+
 function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   const [players, setPlayers] = useState([]);
   const [isInLobby, setIsInLobby] = useState(false);
   const [error, setError] = useState('');
   const [playerId, setPlayerId] = useState(null);
 
-  // Dummy-Implementierung für Demo-Zwecke
+  // Polling für Live-Updates
   useEffect(() => {
+    let interval;
     if (isInLobby && gameId) {
-      // Simuliere andere Spieler
-      const dummyPlayers = [
-        { id: '1', name: playerName, points: 0 },
-        { id: '2', name: 'Bot1', points: 0 },
-        { id: '3', name: 'Bot2', points: 0 }
-      ];
-      setPlayers(dummyPlayers);
+      interval = setInterval(async () => {
+        try {
+          const response = await fetch(`${API_BASE}/lobby`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameId, action: 'getPlayers' })
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setPlayers(data.players);
+          }
+        } catch (error) {}
+      }, 2000);
     }
-  }, [isInLobby, gameId, playerName]);
+    return () => { if (interval) clearInterval(interval); };
+  }, [isInLobby, gameId]);
 
   const handleJoinLobby = async () => {
     if (!playerName.trim() || !gameId.trim()) {
       setError('Name und Raum-ID sind erforderlich!');
       return;
     }
-
-    // Dummy-Implementierung ohne Backend
-    const dummyPlayerId = Date.now().toString();
-    setPlayerId(dummyPlayerId);
-    setIsInLobby(true);
-    setError('');
+    try {
+      const response = await fetch(`${API_BASE}/lobby`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: gameId.trim(), playerName: playerName.trim(), action: 'join' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setPlayers(data.players);
+        setPlayerId(data.playerId);
+        setIsInLobby(true);
+        setError('');
+      } else {
+        setError(data.error || 'Fehler beim Beitreten');
+      }
+    } catch (error) {
+      setError('Verbindungsfehler');
+    }
   };
 
   const handleStartGame = async () => {
@@ -37,15 +59,33 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
       setError('Mindestens 3 Spieler werden benötigt!');
       return;
     }
-
-    // Dummy-Implementierung ohne Backend
-    localStorage.setItem('playerId', playerId);
-    localStorage.setItem('gameData', JSON.stringify({ gameId, players }));
-    onGameStart();
+    try {
+      const response = await fetch(`${API_BASE}/lobby`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, action: 'startGame' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem('playerId', playerId);
+        localStorage.setItem('gameData', JSON.stringify(data.game));
+        onGameStart();
+      } else {
+        setError(data.error || 'Fehler beim Starten');
+      }
+    } catch (error) {
+      setError('Verbindungsfehler');
+    }
   };
 
   const handleLeaveLobby = async () => {
-    // Dummy-Implementierung ohne Backend
+    try {
+      await fetch(`${API_BASE}/lobby`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, playerName, action: 'leave' })
+      });
+    } catch (error) {}
     setIsInLobby(false);
     setPlayers([]);
     setError('');
