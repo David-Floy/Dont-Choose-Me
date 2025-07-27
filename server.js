@@ -658,23 +658,43 @@ function calculatePoints(game) {
     }
   }
 
-  // Punkte für andere Spieler, die Stimmen für ihre Karten erhalten haben
-  for (const selectedCard of game.selectedCards) {
-    if (selectedCard.playerId !== storytellerId) {
-      const votesForCard = votes.filter(v => v.cardId === selectedCard.cardId).length;
-      const player = game.players.find(p => p.id === selectedCard.playerId);
-      if (player) player.points += votesForCard;
+  // Punkte für Spieler, deren Karte gewählt wurde
+  for (const vote of votes) {
+    if (vote.cardId !== correctCardId) {
+      const cardOwner = game.selectedCards.find(c => c.cardId === vote.cardId);
+      if (cardOwner && cardOwner.playerId !== storytellerId) {
+        const ownerPlayer = game.players.find(p => p.id === cardOwner.playerId);
+        if (ownerPlayer) ownerPlayer.points += 1;
+      }
     }
   }
 
-  return { points: game.players.map(p => ({ id: p.name, points: p.points })) };
+  // Erzähler bekommt keine Punkte, wenn alle oder keiner richtig gewählt hat
+  if (allCorrect || noneCorrect) {
+    for (const player of game.players) {
+      if (player.id !== storytellerId) {
+        player.points += 2;
+      }
+    }
+  }
+
+  // Ergebnisse zusammenstellen
+  const results = {
+    scores: game.players.map(p => ({
+      name: p.name,
+      points: p.points,
+      id: p.id
+    })),
+    votes: votes,
+    correctCardId: correctCardId,
+    storytellerId: storytellerId
+  };
+
+  return results;
 }
 
 // === SERVER START ===
-
-// Karten laden und Server starten
 loadCards();
-
 server.listen(PORT, () => {
   console.log(`PicMe Server läuft auf Port ${PORT}`);
 });
