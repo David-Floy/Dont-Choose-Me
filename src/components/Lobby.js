@@ -1,118 +1,95 @@
 import React, { useEffect, useState } from 'react';
-import io from 'socket.io-client';
 
-const socket = io('https://dont-choose-me.vercel.app/', { autoConnect: true });
+const API_BASE = '/api';
 
 function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   const [players, setPlayers] = useState([]);
   const [isInLobby, setIsInLobby] = useState(false);
   const [error, setError] = useState('');
+  const [playerId, setPlayerId] = useState(null);
 
+  // Polling für Live-Updates
   useEffect(() => {
-    const handleLobbyUpdate = (playerList) => {
-      setPlayers(playerList);
-    };
+    let interval;
+    if (isInLobby && gameId) {
+      interval = setInterval(async () => {
+        try {
+          const response = await fetch(`${API_BASE}/lobby`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameId, action: 'getPlayers' })
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setPlayers(data.players);
+          }
+        } catch (error) {}
+      }, 2000);
+    }
+    return () => { if (interval) clearInterval(interval); };
+  }, [isInLobby, gameId]);
 
-    const handleGameStarted = () => {
-      onGameStart();
-    };
-
-    const handleJoinError = ({ error }) => {
-      setError(error);
-      setIsInLobby(false);
-    };
-
-    const handleJoinSuccess = ({ gameId: validatedGameId, playerName: validatedPlayerName }) => {
-      setGameId(validatedGameId);
-      setPlayerName(validatedPlayerName);
-      setError('');
-    };
-
-    const handleStartGameError = ({ error }) => {
-      setError(error);
-    };
-
-    socket.on('lobbyUpdate', handleLobbyUpdate);
-    socket.on('gameStarted', handleGameStarted);
-    socket.on('joinError', handleJoinError);
-    socket.on('joinSuccess', handleJoinSuccess);
-    socket.on('startGameError', handleStartGameError);
-
-    return () => {
-      socket.off('lobbyUpdate', handleLobbyUpdate);
-      socket.off('gameStarted', handleGameStarted);
-      socket.off('joinError', handleJoinError);
-      socket.off('joinSuccess', handleJoinSuccess);
-      socket.off('startGameError', handleStartGameError);
-    };
-  }, [onGameStart]);
-
-  const handleJoinLobby = () => {
-    // Client-seitige Vorvalidierung (für bessere UX)
-    if (!playerName.trim()) {
-      setError('Bitte gib einen Spielernamen ein!');
+  const handleJoinLobby = async () => {
+    if (!playerName.trim() || !gameId.trim()) {
+      setError('Name und Raum-ID sind erforderlich!');
       return;
     }
-    if (!gameId.trim()) {
-      setError('Bitte gib eine Raum-ID ein!');
-      return;
+    try {
+      const response = await fetch(`${API_BASE}/lobby`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: gameId.trim(), playerName: playerName.trim(), action: 'join' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setPlayers(data.players);
+        setPlayerId(data.playerId);
+        setIsInLobby(true);
+        setError('');
+      } else {
+        setError(data.error || 'Fehler beim Beitreten');
+      }
+    } catch (error) {
+      setError('Verbindungsfehler');
     }
-
-    if (playerName.trim().length < 2) {
-      setError('Spielername muss mindestens 2 Zeichen lang sein!');
-      return;
-    }
-
-    if (playerName.trim().length > 20) {
-      setError('Spielername darf maximal 20 Zeichen lang sein!');
-      return;
-    }
-
-    if (gameId.trim().length < 2) {
-      setError('Raum-ID muss mindestens 2 Zeichen lang sein!');
-      return;
-    }
-
-    if (gameId.trim().length > 15) {
-      setError('Raum-ID darf maximal 15 Zeichen lang sein!');
-      return;
-    }
-
-    // Prüfe auf erlaubte Zeichen für Spielername
-    if (!/^[a-zA-ZäöüÄÖÜß0-9\s]+$/.test(playerName.trim())) {
-      setError('Spielername darf nur Buchstaben, Zahlen und Leerzeichen enthalten!');
-      return;
-    }
-
-    // Prüfe auf erlaubte Zeichen für Raum-ID
-    if (!/^[a-zA-Z0-9_-]+$/.test(gameId.trim())) {
-      setError('Raum-ID darf nur Buchstaben, Zahlen, Bindestriche und Unterstriche enthalten!');
-      return;
-    }
-
-    setError('');
-    socket.emit('joinLobby', { playerName: playerName.trim(), gameId: gameId.trim() });
-    setIsInLobby(true);
   };
 
-  const handleStartGame = () => {
-    // Client-seitige Vorvalidierung
+  const handleStartGame = async () => {
     if (players.length < 3) {
       setError('Mindestens 3 Spieler werden benötigt!');
       return;
     }
-
-    setError('');
-    socket.emit('startGame', gameId);
+    try {
+      const response = await fetch(`${API_BASE}/lobby`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, action: 'startGame' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem('playerId', playerId);
+        localStorage.setItem('gameData', JSON.stringify(data.game));
+        onGameStart();
+      } else {
+        setError(data.error || 'Fehler beim Starten');
+      }
+    } catch (error) {
+      setError('Verbindungsfehler');
+    }
   };
 
-  const handleLeaveLobby = () => {
+  const handleLeaveLobby = async () => {
+    try {
+      await fetch(`${API_BASE}/lobby`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, playerName, action: 'leave' })
+      });
+    } catch (error) {}
     setIsInLobby(false);
     setPlayers([]);
     setError('');
-
-    // Sende disconnect event und verlasse den Socket-Raum
-    socket.emit('leaveLobby', { gameId, playerName });
+    setPlayerId(null);
   };
 
   if (!isInLobby) {
@@ -518,3 +495,5 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
 }
 
 export default Lobby;
+
+// Code ist bereits auf HTTP-Fetch/Polling umgestellt und clean
