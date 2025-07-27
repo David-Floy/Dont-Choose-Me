@@ -139,8 +139,15 @@ class GameManager {
     console.log(`Total cards available: ${cards.length}`);
     console.log(`Number of players: ${game.players.length}`);
 
+    // Überprüfe ob genug Karten für alle Spieler vorhanden sind
+    const cardsNeeded = game.players.length * 6;
+    if (cards.length < cardsNeeded) {
+      console.error(`Not enough cards! Need ${cardsNeeded}, but only have ${cards.length}`);
+      return null;
+    }
+
     // Spiel initialisieren
-    game.deck = this.shuffle([...cards]);
+    game.deck = this.shuffle([...cards]); // Kopie erstellen um Original nicht zu verändern
     game.state = 'playing';
     game.round = 1;
     game.storytellerIndex = 0;
@@ -151,20 +158,35 @@ class GameManager {
     game.votes = [];
     game.phase = 'storytelling';
 
-    // Karten an Spieler verteilen
+    // Karten an Spieler verteilen - jede Karte nur einmal
     for (let i = 0; i < game.players.length; i++) {
       const player = game.players[i];
       const cardsToTake = Math.min(6, game.deck.length);
-      player.hand = game.deck.splice(0, cardsToTake);
+      player.hand = game.deck.splice(0, cardsToTake); // splice entfernt Karten aus dem Deck
 
       console.log(`Dealt ${player.hand.length} cards to ${player.name} (${player.id})`);
       console.log(`  Card IDs: ${player.hand.map(c => c.id).join(', ')}`);
       console.log(`  Remaining deck size: ${game.deck.length}`);
     }
 
+    // Validierung: Prüfe auf Duplikate
+    const allHandCards = game.players.flatMap(p => p.hand);
+    const cardIds = allHandCards.map(c => c.id);
+    const uniqueCardIds = [...new Set(cardIds)];
+
+    if (cardIds.length !== uniqueCardIds.length) {
+      console.error(`ERROR: Duplicate cards detected!`);
+      console.error(`Total cards in hands: ${cardIds.length}, Unique cards: ${uniqueCardIds.length}`);
+
+      // Debug: Finde Duplikate
+      const duplicates = cardIds.filter((id, index) => cardIds.indexOf(id) !== index);
+      console.error(`Duplicate card IDs:`, [...new Set(duplicates)]);
+    }
+
     console.log(`=== GAME ${gameId} STARTED ===`);
     console.log(`Initial storyteller: ${game.players[game.storytellerIndex].name}`);
     console.log(`Final deck size: ${game.deck.length}`);
+    console.log(`Cards distributed: ${allHandCards.length}, Unique cards: ${uniqueCardIds.length}`);
 
     // Validierung: Alle Spieler haben Karten
     const playersWithoutCards = game.players.filter(p => !p.hand || p.hand.length === 0);
@@ -183,14 +205,53 @@ class GameManager {
     const game = this.games[gameId];
     if (!game) return;
 
+    // Prüfe vor der nächsten Runde auf Gewinner
+    const winner = game.players.find(p => p.points >= 30);
+    if (winner) {
+      game.phase = 'gameEnd';
+      game.winner = winner.name;
+      console.log(`Game ${gameId} ended! Winner: ${winner.name} with ${winner.points} points`);
+      return;
+    }
+
     game.round += 1;
     game.storytellerIndex = (game.storytellerIndex + 1) % game.players.length;
 
-    // Spieler-Hände auffüllen
+    // Spieler-Hände auffüllen - aber nur bis maximal 6 Karten und keine Duplikate
+    console.log(`=== REFILLING HANDS FOR ROUND ${game.round} ===`);
+    console.log(`Deck size before refill: ${game.deck.length}`);
+
     for (const player of game.players) {
-      while (player.hand.length < 6 && game.deck.length > 0) {
-        player.hand.push(game.deck.shift());
+      const cardsNeeded = 6 - player.hand.length;
+      const cardsToTake = Math.min(cardsNeeded, game.deck.length);
+
+      if (cardsToTake > 0) {
+        const newCards = game.deck.splice(0, cardsToTake); // splice entfernt Karten aus Deck
+        player.hand.push(...newCards);
+
+        console.log(`${player.name}: Added ${cardsToTake} cards (had ${6 - cardsNeeded}, now has ${player.hand.length})`);
+        console.log(`  New card IDs: ${newCards.map(c => c.id).join(', ')}`);
+      } else {
+        console.log(`${player.name}: No cards added (has ${player.hand.length} cards)`);
       }
+    }
+
+    console.log(`Deck size after refill: ${game.deck.length}`);
+
+    // Validierung: Prüfe erneut auf Duplikate nach dem Auffüllen
+    const allHandCards = game.players.flatMap(p => p.hand);
+    const cardIds = allHandCards.map(c => c.id);
+    const uniqueCardIds = [...new Set(cardIds)];
+
+    if (cardIds.length !== uniqueCardIds.length) {
+      console.error(`ERROR: Duplicate cards after refill!`);
+      console.error(`Total cards in hands: ${cardIds.length}, Unique cards: ${uniqueCardIds.length}`);
+
+      // Debug: Finde Duplikate
+      const duplicates = cardIds.filter((id, index) => cardIds.indexOf(id) !== index);
+      console.error(`Duplicate card IDs:`, [...new Set(duplicates)]);
+    } else {
+      console.log(`✓ No duplicate cards found. ${uniqueCardIds.length} unique cards in play.`);
     }
 
     // Runden-spezifische Daten zurücksetzen
@@ -202,6 +263,39 @@ class GameManager {
     game.phase = 'storytelling';
 
     console.log(`Next round prepared for game ${gameId}, new storyteller: ${game.players[game.storytellerIndex].name}`);
+    console.log(`=== END REFILLING HANDS ===`);
+  }
+
+  /**
+   * Startet ein Spiel neu
+   * @param {string} gameId - Die Spiel-ID
+   * @param {Array} cards - Array aller verfügbaren Karten
+   */
+  restartGame(gameId, cards) {
+    const game = this.games[gameId];
+    if (!game) return null;
+
+    // Spiel komplett zurücksetzen, aber Spieler behalten
+    game.state = 'lobby';
+    game.round = 0;
+    game.storytellerIndex = 0;
+    game.hint = '';
+    game.storytellerCard = null;
+    game.selectedCards = [];
+    game.mixedCards = [];
+    game.votes = [];
+    game.phase = 'waiting';
+    game.winner = null;
+    game.deck = [];
+
+    // Alle Spieler-Punkte zurücksetzen und Hände leeren
+    for (const player of game.players) {
+      player.points = 0;
+      player.hand = [];
+    }
+
+    console.log(`Game ${gameId} restarted, ${game.players.length} players ready for new game`);
+    return game;
   }
 
   /**

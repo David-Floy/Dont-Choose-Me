@@ -1,25 +1,56 @@
 import React from 'react';
 
-function Card({ card, onClick, selected }) {
+function Card({ card, onClick, selected, style = {} }) {
   return (
     <div
-      style={{
-        border: selected ? '2px solid #007bff' : '1px solid #ccc',
-        padding: 10,
-        margin: 10,
-        cursor: 'pointer',
-        display: 'inline-block',
-        background: '#fff',
-        borderRadius: 8,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}
       onClick={onClick}
+      style={{
+        border: selected ? '4px solid #007bff' : '2px solid rgba(255,255,255,0.3)',
+        borderRadius: '16px',
+        padding: '8px',
+        margin: '8px',
+        cursor: onClick ? 'pointer' : 'default',
+        background: selected ? 'linear-gradient(135deg, #e3f2fd, #bbdefb)' : 'rgba(255,255,255,0.95)',
+        transition: 'all 0.3s ease',
+        boxShadow: selected
+          ? '0 12px 24px rgba(0,123,255,0.3)'
+          : '0 8px 16px rgba(0,0,0,0.15)',
+        backdropFilter: 'blur(10px)',
+        ...style
+      }}
+      onMouseOver={(e) => {
+        if (onClick) {
+          e.currentTarget.style.transform = 'scale(1.08) translateY(-4px)';
+          e.currentTarget.style.boxShadow = '0 16px 32px rgba(0,0,0,0.25)';
+        }
+      }}
+      onMouseOut={(e) => {
+        if (onClick) {
+          e.currentTarget.style.transform = selected ? 'scale(1.05)' : 'scale(1)';
+          e.currentTarget.style.boxShadow = selected
+            ? '0 12px 24px rgba(0,123,255,0.3)'
+            : '0 8px 16px rgba(0,0,0,0.15)';
+        }
+      }}
     >
-      <img src={card.image} alt={card.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 4 }} />
-      <div style={{ marginTop: 8, fontWeight: 'bold' }}>{card.title}</div>
+      <img
+        src={`http://localhost:3001${card.image}`}
+        alt={card.title || `Card ${card.id}`}
+        style={{
+          width: '250px',
+          height: '200px',
+          objectFit: 'cover',
+          borderRadius: '12px',
+          display: 'block',
+          filter: selected ? 'brightness(1.1) contrast(1.1)' : 'brightness(1)',
+          transition: 'filter 0.3s ease'
+        }}
+        onError={(e) => {
+          e.target.src = `https://via.placeholder.com/250x200/cccccc/666666?text=Card+${card.id}`;
+        }}
+      />
     </div>
   );
 }
 
 export default Card;
-

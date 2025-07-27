@@ -48,6 +48,9 @@ app.get('/api/cards', (req, res) => {
   res.json(cards);
 });
 
+// Statische Dateien für Bilder servieren
+app.use('/images', express.static(path.join(__dirname, 'images')));
+
 // Statische Dateien servieren
 app.use(express.static(path.join(__dirname, 'build')));
 
@@ -95,6 +98,63 @@ io.on('connection', (socket) => {
   });
 
   /**
+   * Spieler wählt Karte
+   */
+  socket.on('chooseCard', ({ gameId, cardId }) => {
+    console.log(`Card chosen in game ${gameId} by ${socket.id}`);
+
+    const game = gameManager.getGame(gameId);
+    if (!game) return;
+
+    // Validierungen
+    if (socket.id === game.selectedCards[0].playerId) return; // Erzähler
+    if (game.selectedCards.find(c => c.playerId === socket.id)) return; // Bereits gewählt
+
+    // Zusätzliche Validierung: Prüfe ob Spieler die Karte wirklich hat
+    const player = game.players.find(p => p.id === socket.id);
+    if (!player) {
+      console.error(`Player not found for socket ${socket.id}`);
+      return;
+    }
+
+    const hasCard = player.hand.find(c => c.id === cardId);
+    if (!hasCard) {
+      console.error(`Player ${player.name} tried to play card ${cardId} but doesn't have it!`);
+      console.error(`Player's hand: ${player.hand.map(c => c.id).join(', ')}`);
+      return;
+    }
+
+    // Karte aus Hand entfernen und zu ausgewählten hinzufügen
+    player.hand = player.hand.filter(card => card.id !== cardId);
+    game.selectedCards.push({ cardId, playerId: socket.id });
+
+    console.log(`${player.name} played card ${cardId}. Hand now has ${player.hand.length} cards.`);
+    console.log(`Card chosen: ${game.selectedCards.length}/${game.players.length} cards selected`);
+
+    // Alle Karten gewählt? -> Voting-Phase
+    if (game.selectedCards.length === game.players.length) {
+      game.mixedCards = shuffle([...game.selectedCards]);
+      game.phase = 'voting';
+      console.log(`All cards selected in game ${gameId}, starting voting phase`);
+
+      // Debug: Zeige alle gespielten Karten
+      console.log('=== CARDS PLAYED THIS ROUND ===');
+      game.selectedCards.forEach(sc => {
+        const player = game.players.find(p => p.id === sc.playerId);
+        console.log(`${player ? player.name : 'Unknown'}: Card ${sc.cardId}`);
+      });
+      console.log('=== END CARDS PLAYED ===');
+
+      io.to(gameId).emit('cardsReady', { cards: game.mixedCards });
+    }
+
+    io.to(gameId).emit('gameState', {
+      ...game,
+      storytellerIndex: game.storytellerIndex
+    });
+  });
+
+  /**
    * Erzähler gibt Hinweis
    */
   socket.on('giveHint', ({ gameId, cardId, hint }) => {
@@ -122,6 +182,14 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Zusätzliche Validierung: Prüfe ob Erzähler die Karte wirklich hat
+    const hasCard = currentPlayer.hand.find(c => c.id === cardId);
+    if (!hasCard) {
+      console.error(`Storyteller ${currentPlayer.name} tried to play card ${cardId} but doesn't have it!`);
+      console.error(`Storyteller's hand: ${currentPlayer.hand.map(c => c.id).join(', ')}`);
+      return;
+    }
+
     // Hinweis setzen und Karte entfernen
     game.hint = hint;
     game.storytellerCard = cardId;
@@ -129,11 +197,9 @@ io.on('connection', (socket) => {
     game.phase = 'selectCards';
     game.votes = [];
 
-    const storyteller = game.players.find(p => p.id === socket.id);
-    if (storyteller) {
-      storyteller.hand = storyteller.hand.filter(card => card.id !== cardId);
-      console.log(`Storyteller ${storyteller.name} hand after hint: ${storyteller.hand.length} cards`);
-    }
+    // Karte aus Hand entfernen
+    currentPlayer.hand = currentPlayer.hand.filter(card => card.id !== cardId);
+    console.log(`Storyteller ${currentPlayer.name} played card ${cardId}. Hand now has ${currentPlayer.hand.length} cards.`);
 
     // Debug: Alle Spieler-Hände detailliert loggen
     console.log('=== DETAILED HAND DEBUG AFTER HINT ===');
@@ -155,42 +221,6 @@ io.on('connection', (socket) => {
   });
 
   /**
-   * Spieler wählt Karte
-   */
-  socket.on('chooseCard', ({ gameId, cardId }) => {
-    console.log(`Card chosen in game ${gameId} by ${socket.id}`);
-
-    const game = gameManager.getGame(gameId);
-    if (!game) return;
-
-    // Validierungen
-    if (socket.id === game.selectedCards[0].playerId) return; // Erzähler
-    if (game.selectedCards.find(c => c.playerId === socket.id)) return; // Bereits gewählt
-
-    // Karte aus Hand entfernen und zu ausgewählten hinzufügen
-    const player = game.players.find(p => p.id === socket.id);
-    if (player) {
-      player.hand = player.hand.filter(card => card.id !== cardId);
-    }
-
-    game.selectedCards.push({ cardId, playerId: socket.id });
-    console.log(`Card chosen: ${game.selectedCards.length}/${game.players.length} cards selected`);
-
-    // Alle Karten gewählt? -> Voting-Phase
-    if (game.selectedCards.length === game.players.length) {
-      game.mixedCards = shuffle([...game.selectedCards]);
-      game.phase = 'voting';
-      console.log(`All cards selected in game ${gameId}, starting voting phase`);
-      io.to(gameId).emit('cardsReady', { cards: game.mixedCards });
-    }
-
-    io.to(gameId).emit('gameState', {
-      ...game,
-      storytellerIndex: game.storytellerIndex
-    });
-  });
-
-  /**
    * Spieler stimmt für Karte ab
    */
   socket.on('voteCard', ({ gameId, cardId }) => {
@@ -205,18 +235,116 @@ io.on('connection', (socket) => {
     game.votes.push({ cardId, playerId: socket.id });
     console.log(`Vote cast: ${game.votes.length}/${game.players.length - 1} votes`);
 
-    // Alle Stimmen abgegeben? -> Runde beenden
+    // Alle Stimmen abgegeben? -> Reveal-Phase
     if (game.votes.length === game.players.length - 1) {
       const results = calculatePoints(game);
-      io.to(gameId).emit('roundEnded', results);
 
-      gameManager.prepareNextRound(gameId);
+      // Prüfe auf Spielende (30 Punkte erreicht)
+      const winner = game.players.find(p => p.points >= 30);
 
+      if (winner) {
+        // Spiel beenden
+        game.phase = 'gameEnd';
+        game.winner = winner.name;
+
+        console.log(`Game ${gameId} ended! Winner: ${winner.name} with ${winner.points} points`);
+
+        io.to(gameId).emit('gameEnded', {
+          winner: winner.name,
+          finalScores: game.players.map(p => ({
+            name: p.name,
+            points: p.points,
+            id: p.id
+          }))
+        });
+
+        io.to(gameId).emit('gameState', {
+          ...game,
+          storytellerIndex: game.storytellerIndex
+        });
+      } else {
+        // Normale Reveal-Phase
+        game.phase = 'reveal';
+
+        console.log(`All votes cast in game ${gameId}, starting reveal phase`);
+
+        io.to(gameId).emit('roundEnded', results);
+        io.to(gameId).emit('gameState', {
+          ...game,
+          storytellerIndex: game.storytellerIndex
+        });
+      }
+    } else {
+      // Sende Update während des Votings
       io.to(gameId).emit('gameState', {
-        ...gameManager.getGame(gameId),
-        storytellerIndex: gameManager.getGame(gameId).storytellerIndex
+        ...game,
+        storytellerIndex: game.storytellerIndex
       });
     }
+  });
+
+  /**
+   * Spiel neustarten
+   */
+  socket.on('restartGame', (gameId) => {
+    console.log(`Restart game requested for ${gameId}`);
+
+    const game = gameManager.getGame(gameId);
+    if (!game) return;
+
+    // Spiel komplett zurücksetzen
+    game.state = 'lobby';
+    game.round = 0;
+    game.storytellerIndex = 0;
+    game.hint = '';
+    game.storytellerCard = null;
+    game.selectedCards = [];
+    game.mixedCards = [];
+    game.votes = [];
+    game.phase = 'waiting';
+    game.winner = null;
+
+    // Alle Spieler-Punkte zurücksetzen und Hände leeren
+    for (const player of game.players) {
+      player.points = 0;
+      player.hand = [];
+    }
+
+    // Deck neu mischen
+    game.deck = shuffle([...cards]);
+
+    console.log(`Game ${gameId} restarted, back to lobby`);
+
+    io.to(gameId).emit('gameState', {
+      ...game,
+      storytellerIndex: game.storytellerIndex
+    });
+
+    io.to(gameId).emit('lobbyUpdate', game.players);
+  });
+
+  /**
+   * Weiter zur nächsten Runde nach Reveal
+   */
+  socket.on('continueToNextRound', (gameId) => {
+    console.log(`Continue to next round requested for game ${gameId}`);
+
+    const game = gameManager.getGame(gameId);
+    if (!game || game.phase !== 'reveal') {
+      console.log(`Cannot continue - game not found or not in reveal phase. Current phase: ${game?.phase}`);
+      return;
+    }
+
+    console.log(`Preparing next round for game ${gameId}`);
+    gameManager.prepareNextRound(gameId);
+
+    const updatedGame = gameManager.getGame(gameId);
+    console.log(`Next round prepared. New phase: ${updatedGame.phase}, New storyteller: ${updatedGame.players[updatedGame.storytellerIndex].name}`);
+
+    io.to(gameId).emit('gameState', {
+      ...updatedGame,
+      storytellerIndex: updatedGame.storytellerIndex
+    });
   });
 
   /**
