@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import io from 'socket.io-client';
 import Card from './Card';
 
-const socket = io('https://dont-choose-me.vercel.app/', { autoConnect: true });
+const API_BASE = '/api';
 
 /**
  * Haupt-Spielkomponente für das PicMe-Spiel
@@ -24,198 +23,83 @@ function Game({ playerName, gameId }) {
   const [pointsEarned, setPointsEarned] = useState(null);
   const [revealTimer, setRevealTimer] = useState(null);
   const [gameWinner, setGameWinner] = useState(null);
+  const [playerId, setPlayerId] = useState(localStorage.getItem('playerId'));
 
-  // === HELPER FUNCTIONS ===
-
-  /**
-   * Aktualisiert die Hand des aktuellen Spielers basierend auf den Spieldaten
-   * @param {Object} gameData - Aktuelle Spieldaten vom Server
-   */
-  const updateHand = (gameData) => {
-    console.log('=== UPDATING HAND ===');
-    console.log('Player name:', playerName);
-    console.log('Available players:', gameData.players?.map(p => ({
-      name: p.name,
-      id: p.id,
-      handSize: p.hand?.length,
-      handIds: p.hand?.map(c => c.id).join(', ') || 'empty'
-    })));
-
-    const me = gameData.players.find(p => p.name === playerName);
-
-    if (me) {
-      console.log(`Found player ${playerName} with:`);
-      console.log(`  Socket ID: ${me.id}`);
-      console.log(`  Hand size: ${me.hand?.length || 0}`);
-      console.log(`  Hand IDs: ${me.hand?.map(c => c.id).join(', ') || 'empty'}`);
-
-      setHand(me.hand || []);
-
-      // Wenn Hand leer ist aber Spiel läuft, fordere neuen Spielzustand an
-      if ((!me.hand || me.hand.length === 0) && gameData.state === 'playing' && gameData.phase !== 'voting') {
-        console.warn('Hand is empty, requesting fresh game state...');
-        setTimeout(() => {
-          socket.emit('getGameState', gameId);
-        }, 1000);
-      }
-    } else {
-      console.warn(`Player ${playerName} not found in game data!`);
-      console.log('Available player names:', gameData.players?.map(p => p.name));
-      setHand([]);
-    }
-    console.log('=== END UPDATING HAND ===');
-  };
-
-  /**
-   * Bestimmt die aktuelle Spielphase basierend auf Spielzustand
-   * @param {Object} gameData - Aktuelle Spieldaten
-   * @returns {string} Die berechnete Phase
-   */
-  const calculatePhase = (gameData) => {
-    if (!gameData?.players?.length) return 'waiting';
-
-    // Prüfe auf Spielende
-    if (gameData.phase === 'gameEnd' || gameData.winner) {
-      return 'gameEnd';
-    }
-
-    const storyteller = gameData.players[gameData.storytellerIndex];
-    const isStoryteller = storyteller?.name === playerName;
-
-    // Server-Phase hat Priorität
-    if (gameData.phase) {
-      switch (gameData.phase) {
-        case 'storytelling':
-          return isStoryteller ? 'giveHint' : 'waiting';
-        case 'selectCards':
-          const hasSelectedCard = gameData.selectedCards?.some(sc => {
-            const player = gameData.players.find(p => p.id === sc.playerId);
-            return player?.name === playerName;
-          });
-          return (isStoryteller || hasSelectedCard) ? 'waiting' : 'chooseCard';
-        case 'voting':
-          return 'vote'; // Beide Erzähler und andere gehen in vote-Phase
-        case 'reveal':
-          return 'reveal';
-        case 'gameEnd':
-          return 'gameEnd';
-        default:
-          return 'waiting';
-      }
-    }
-
-    // Fallback-Logik
-    if (!gameData.hint) {
-      return isStoryteller ? 'giveHint' : 'waiting';
-    }
-
-    if (gameData.selectedCards?.length < gameData.players.length) {
-      const hasSelectedCard = gameData.selectedCards.some(sc => {
-        const player = gameData.players.find(p => p.id === sc.playerId);
-        return player?.name === playerName;
-      });
-      return (isStoryteller || hasSelectedCard) ? 'waiting' : 'chooseCard';
-    }
-
-    if (gameData.selectedCards?.length === gameData.players.length && !gameData.votes?.length) {
-      return 'vote'; // Beide Erzähler und andere gehen in vote-Phase
-    }
-
-    return gameData.votes?.length > 0 ? 'results' : 'waiting';
-  };
-
-  // === SOCKET EVENT HANDLERS ===
-
-  /**
-   * Initialisiert Socket-Event-Listener
-   */
+  // Polling für Spielstatus
   useEffect(() => {
-    // Stelle sicher, dass der Server weiß, wer wir sind
-    socket.emit('joinLobby', { playerName, gameId });
-    socket.emit('getGameState', gameId);
-
-    const handleGameStarted = (gameData) => {
-      console.log('Game started, received data:', gameData);
-      setGame(gameData);
-      updateHand(gameData);
-      setSelectedCard(null);
-      setMixedCards([]);
-      setHint('');
-    };
-
-    const handleGameState = (gameData) => {
-      console.log('Received gameState:', gameData);
-      setGame(gameData);
-      updateHand(gameData);
-    };
-
-    const handleCardsReady = ({ cards }) => {
-      setMixedCards(cards);
-    };
-
-    /**
-     * Event-Handler für Rundenende - NICHT mehr die Phase überschreiben
-     */
-    const handleRoundEnded = ({ points }) => {
-      console.log('Round ended, received points:', points);
-      // Nur die Punkteänderungen berechnen, Phase wird durch gameState gesetzt
-      if (game && game.players) {
-        const changes = calculateScoreChanges(game.players, points.map(p => ({
-          name: p.id,
-          points: p.points
-        })));
-        setScoreChanges(changes);
-        setPointsEarned(changes);
+    let interval = setInterval(async () => {
+      try {
+        const response = await fetch(`${API_BASE}/game`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gameId, action: 'getState' })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setGame(data.game);
+          updateHand(data.game);
+          setMixedCards(data.game.mixedCards || []);
+        }
+      } catch (error) {
+        console.error('Error polling game state:', error);
       }
-    };
-
-    const handleGameEnded = ({ winner, finalScores }) => {
-      console.log('Game ended, winner:', winner);
-      setGameWinner({ winner, finalScores });
-      setPhase('gameEnd');
-    };
-
-    const handleGameRestarted = () => {
-      console.log('Game restarted, going back to lobby');
-      // Zurück zur Lobby
-      window.location.reload(); // Einfacher Weg zur Lobby zurückzukehren
-    };
-
-    // Event-Listener registrieren
-    socket.on('gameStarted', handleGameStarted);
-    socket.on('gameState', handleGameState);
-    socket.on('cardsReady', handleCardsReady);
-    socket.on('roundEnded', handleRoundEnded);
-    socket.on('gameEnded', handleGameEnded);
-    socket.on('gameRestarted', handleGameRestarted);
-
-    // Cleanup
-    return () => {
-      socket.off('gameStarted', handleGameStarted);
-      socket.off('gameState', handleGameState);
-      socket.off('cardsReady', handleCardsReady);
-      socket.off('roundEnded', handleRoundEnded);
-      socket.off('gameEnded', handleGameEnded);
-      socket.off('gameRestarted', handleGameRestarted);
-    };
+    }, 2000);
+    return () => clearInterval(interval);
   }, [gameId, playerName]);
 
-  /**
-   * Überwacht Änderungen am Spielzustand und aktualisiert die Phase
-   */
+  // Karten laden
+  useEffect(() => {
+    fetch('/api/cards')
+      .then(res => res.json())
+      .then(cards => setAllCards(cards))
+      .catch(() => setAllCards([]));
+  }, []);
+
+  // Hilfsfunktion: Hand aktualisieren
+  const updateHand = (gameData) => {
+    if (gameData && gameData.players) {
+      const me = gameData.players.find(p => p.name === playerName);
+      setHand(me?.hand || []);
+    }
+  };
+
+  // Hilfsfunktion: Berechne die aktuelle Phase
   useEffect(() => {
     if (game) {
-      const newPhase = calculatePhase(game);
+      let newPhase = 'waiting';
+
+      if (game.phase === 'gameEnd' || game.winner) {
+        newPhase = 'gameEnd';
+        setGameWinner({ winner: game.winner, finalScores: game.players });
+      } else if (game.phase === 'storytelling') {
+        const storyteller = game.players?.[game.storytellerIndex];
+        newPhase = storyteller?.name === playerName ? 'giveHint' : 'waiting';
+      } else if (game.phase === 'selectCards') {
+        const hasSelectedCard = game.selectedCards?.some(sc => {
+          const player = game.players.find(p => p.id === sc.playerId);
+          return player?.name === playerName;
+        });
+        const storyteller = game.players?.[game.storytellerIndex];
+        newPhase = (storyteller?.name === playerName || hasSelectedCard) ? 'waiting' : 'chooseCard';
+      } else if (game.phase === 'voting') {
+        const storyteller = game.players?.[game.storytellerIndex];
+        const hasVoted = game.votes?.some(v => {
+          const player = game.players.find(p => p.id === v.playerId);
+          return player?.name === playerName;
+        });
+        newPhase = (storyteller?.name === playerName || hasVoted) ? 'waiting' : 'vote';
+      } else if (game.phase === 'reveal') {
+        newPhase = 'reveal';
+      }
+
       setPhase(newPhase);
 
-      // Bei Reveal-Phase: Reveal-Infos setzen (ohne Timer)
+      // Reveal-Infos setzen
       if (newPhase === 'reveal' && game.votes && game.selectedCards && game.votes.length > 0 && game.selectedCards.length > 0) {
-        // Sammle Reveal-Infos
         const votesPerCard = {};
         game.votes.forEach(v => {
           votesPerCard[v.cardId] = (votesPerCard[v.cardId] || 0) + 1;
         });
-
         const revealData = game.selectedCards.map(sc => {
           const player = game.players.find(p => p.id === sc.playerId);
           return {
@@ -225,158 +109,116 @@ function Game({ playerName, gameId }) {
             votes: votesPerCard[sc.cardId] || 0
           };
         });
-
-        console.log('Setting reveal info:', revealData);
         setRevealInfo(revealData);
       } else if (newPhase !== 'reveal') {
         setRevealInfo(null);
         setRevealTimer(null);
       }
-
-      console.log('Phase calculation:', {
-        gameHint: game.hint,
-        selectedCards: game.selectedCards?.length,
-        totalPlayers: game.players?.length,
-        votes: game.votes?.length,
-        isStoryteller: game.players?.[game.storytellerIndex]?.name === playerName,
-        serverPhase: game.phase,
-        calculatedPhase: newPhase,
-        hasRevealInfo: !!revealInfo
-      });
     }
   }, [game, playerName]);
-
-  /**
-   * Lädt alle verfügbaren Karten beim Komponenten-Mount
-   */
-  useEffect(() => {
-    fetch('http://localhost:3001/api/cards')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(cards => {
-        console.log('Karten erfolgreich geladen:', cards.length);
-        setAllCards(cards);
-      })
-      .catch(err => {
-        console.error('Fehler beim Laden der Karten:', err);
-        // Fallback: Leeres Array setzen
-        setAllCards([]);
-      });
-  }, []);
 
   // === GAME ACTIONS ===
 
   /**
    * Behandelt das Geben eines Hinweises durch den Erzähler
    */
-  const handleGiveHint = () => {
-    if (!selectedCard || !hint.trim()) {
-      console.log('Missing card or hint');
-      return;
-    }
+  const handleGiveHint = async () => {
+    if (!selectedCard || !hint.trim()) return;
 
-    console.log('Giving hint:', hint, 'with card:', selectedCard, 'as player:', playerName);
-    socket.emit('giveHint', { gameId, cardId: selectedCard, hint: hint.trim() });
-    setSelectedCard(null);
-    setHint('');
+    try {
+      await fetch(`${API_BASE}/game`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, action: 'giveHint', cardId: selectedCard, hint: hint.trim(), playerId })
+      });
+      setSelectedCard(null);
+      setHint('');
+    } catch (error) {
+      console.error('Error giving hint:', error);
+    }
   };
 
   /**
    * Behandelt die Kartenauswahl durch Nicht-Erzähler
-   * @param {string} cardId - ID der ausgewählten Karte
    */
-  const handleChooseCard = (cardId) => {
-    socket.emit('chooseCard', { gameId, cardId });
-    setSelectedCard(cardId);
+  const handleChooseCard = async (cardId) => {
+    try {
+      await fetch(`${API_BASE}/game`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, action: 'chooseCard', cardId, playerId })
+      });
+      setSelectedCard(cardId);
+    } catch (error) {
+      console.error('Error choosing card:', error);
+    }
   };
 
   /**
    * Behandelt die Stimmabgabe für eine Karte
-   * @param {string} cardId - ID der Karte, für die gestimmt wird
    */
-  const handleVote = (cardId) => {
-    socket.emit('voteCard', { gameId, cardId });
+  const handleVote = async (cardId) => {
+    try {
+      await fetch(`${API_BASE}/game`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, action: 'vote', cardId, playerId })
+      });
+    } catch (error) {
+      console.error('Error voting:', error);
+    }
   };
 
   /**
    * Behandelt den Übergang zur nächsten Runde
    */
-  const handleContinueToNextRound = () => {
-    console.log('Requesting continue to next round');
-    setRevealInfo(null); // Reset reveal info beim Übergang
-    setRevealTimer(null); // Reset timer
-    socket.emit('continueToNextRound', gameId);
+  const handleContinueToNextRound = async () => {
+    try {
+      await fetch(`${API_BASE}/game`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, action: 'nextRound' })
+      });
+    } catch (error) {
+      console.error('Error continuing to next round:', error);
+    }
   };
 
   /**
    * Behandelt den Neustart des Spiels
    */
-  const handleRestartGame = () => {
-    console.log('Requesting game restart');
-    setGameWinner(null);
-    setRevealInfo(null);
-    setRevealTimer(null);
-    setScoreChanges([]);
-    setPointsEarned(null);
-    setGame(null);
-    setPhase('waiting');
-    setHand([]);
-    setSelectedCard(null);
-    setHint('');
-    setMixedCards([]);
-    socket.emit('restartGame', gameId);
-  };
-
-  /**
-   * Berechnet die Punkteänderungen nach einer Runde
-   * @param {Object} prevPlayers - Spieler vor der Runde
-   * @param {Object} newPlayers - Spieler nach der Runde
-   * @returns {Array} Array mit {name, oldPoints, newPoints, diff}
-   */
-  const calculateScoreChanges = (prevPlayers, newPlayers) => {
-    if (!prevPlayers || !newPlayers) return [];
-    return newPlayers.map(np => {
-      const old = prevPlayers.find(p => p.name === np.name);
-      const oldPoints = old ? old.points : 0;
-      const diff = np.points - oldPoints;
-      return {
-        name: np.name,
-        oldPoints,
-        newPoints: np.points,
-        diff
-      };
-    });
+  const handleRestartGame = async () => {
+    try {
+      await fetch(`${API_BASE}/game`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, action: 'restart' })
+      });
+      setGameWinner(null);
+      setRevealInfo(null);
+      setRevealTimer(null);
+      setScoreChanges([]);
+      setPointsEarned(null);
+      setGame(null);
+      setPhase('waiting');
+      setHand([]);
+      setSelectedCard(null);
+      setHint('');
+      setMixedCards([]);
+    } catch (error) {
+      console.error('Error restarting game:', error);
+    }
   };
 
   /**
    * Berechnet wer Punkte bekommt und warum (für Reveal-Phase)
-   * @param {Object} game - Aktueller Spielzustand
-   * @returns {Array} Array mit Punkteverteilungs-Details
    */
   const calculatePointsDistribution = (game) => {
-    // Erweiterte Sicherheitschecks
-    if (!game) {
-      console.warn('calculatePointsDistribution: game is null/undefined');
+    if (!game || !game.votes || !Array.isArray(game.votes) || !game.selectedCards || !Array.isArray(game.selectedCards) || game.selectedCards.length === 0) {
       return [];
     }
 
-    if (!game.votes || !Array.isArray(game.votes)) {
-      console.warn('calculatePointsDistribution: game.votes is invalid', game.votes);
-      return [];
-    }
-
-    if (!game.selectedCards || !Array.isArray(game.selectedCards) || game.selectedCards.length === 0) {
-      console.warn('calculatePointsDistribution: game.selectedCards is invalid', game.selectedCards);
-      return [];
-    }
-
-    // Zusätzliche Überprüfung für selectedCards[0]
     if (!game.selectedCards[0] || !game.selectedCards[0].playerId) {
-      console.warn('calculatePointsDistribution: first selected card is invalid', game.selectedCards[0]);
       return [];
     }
 
@@ -660,7 +502,14 @@ function Game({ playerName, gameId }) {
             ❌ Keine Karten in der Hand gefunden!
           </p>
           <button
-            onClick={() => socket.emit('getGameState', gameId)}
+            onClick={() => {
+              // Triggere neuen API-Aufruf statt Socket.io
+              fetch(`${API_BASE}/game`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gameId, action: 'getState' })
+              });
+            }}
             style={{
               padding: '10px 20px',
               fontSize: '16px',
