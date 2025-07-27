@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import io from 'socket.io-client';
 
-const socket = io(process.env.REACT_APP_API_URL || io('http://localhost:3001', { autoConnect: true });
+const socket = io('https://dont-choose-me.vercel.app/', { autoConnect: true });
 
 function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   const [players, setPlayers] = useState([]);

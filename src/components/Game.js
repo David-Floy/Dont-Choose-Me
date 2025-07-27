@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import Card from './Card';
 
-const socket = io(process.env.REACT_APP_API_URL || io('http://localhost:3001', { autoConnect: true });
+const socket = io('https://dont-choose-me.vercel.app/', { autoConnect: true });
 
 /**
  * Haupt-Spielkomponente für das PicMe-Spiel
