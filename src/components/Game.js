@@ -502,7 +502,14 @@ function Game({ playerName, gameId }) {
             ❌ Keine Karten in der Hand gefunden!
           </p>
           <button
-            onClick={() => socket.emit('getGameState', gameId)}
+            onClick={() => {
+              // Triggere neuen API-Aufruf statt Socket.io
+              fetch(`${API_BASE}/game`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gameId, action: 'getState' })
+              });
+            }}
             style={{
               padding: '10px 20px',
               fontSize: '16px',

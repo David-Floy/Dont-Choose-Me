@@ -1,12 +1,23 @@
 {
+  "version": 2,
   "functions": {
     "api/*.js": {
-      "runtime": "@vercel/node"
+      "runtime": "@vercel/node@20.x"
     }
   },
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/images/(.*)", "dest": "/images/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
+  ],
+  "builds": [
+    {
+      "src": "api/*.js",
+      "use": "@vercel/node@20.x"
+    },
+    {
+      "src": "build/**",
+      "use": "@vercel/static"
+    }
   ]
 }
