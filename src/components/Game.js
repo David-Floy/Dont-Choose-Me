@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Card from './Card';
 
-const API_BASE = '/api';
-
 /**
  * Haupt-Spielkomponente für das PicMe-Spiel
  * @param {Object} props - React Props
@@ -25,34 +23,41 @@ function Game({ playerName, gameId }) {
   const [gameWinner, setGameWinner] = useState(null);
   const [playerId, setPlayerId] = useState(localStorage.getItem('playerId'));
 
-  // Polling für Spielstatus
+  // Dummy-Spiel für Demo-Zwecke
   useEffect(() => {
-    let interval = setInterval(async () => {
-      try {
-        const response = await fetch(`${API_BASE}/game`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ gameId, action: 'getState' })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setGame(data.game);
-          updateHand(data.game);
-          setMixedCards(data.game.mixedCards || []);
-        }
-      } catch (error) {
-        console.error('Error polling game state:', error);
-      }
-    }, 2000);
-    return () => clearInterval(interval);
+    const dummyGame = {
+      gameId,
+      state: 'playing',
+      round: 1,
+      players: [
+        { id: '1', name: playerName, points: 0, hand: [] },
+        { id: '2', name: 'Bot1', points: 0, hand: [] },
+        { id: '3', name: 'Bot2', points: 0, hand: [] }
+      ],
+      storytellerIndex: 0,
+      phase: 'storytelling',
+      hint: '',
+      storytellerCard: null,
+      selectedCards: [],
+      votes: [],
+      mixedCards: [],
+      winner: null
+    };
+    setGame(dummyGame);
   }, [gameId, playerName]);
 
-  // Karten laden
+  // Karten laden - verwende lokale Dummy-Daten
   useEffect(() => {
-    fetch('/api/cards')
-      .then(res => res.json())
-      .then(cards => setAllCards(cards))
-      .catch(() => setAllCards([]));
+    const dummyCards = [
+      { id: 1, title: 'Karte 1', image: 'https://placehold.co/300x200?text=Karte+1' },
+      { id: 2, title: 'Karte 2', image: 'https://placehold.co/300x200?text=Karte+2' },
+      { id: 3, title: 'Karte 3', image: 'https://placehold.co/300x200?text=Karte+3' },
+      { id: 4, title: 'Karte 4', image: 'https://placehold.co/300x200?text=Karte+4' },
+      { id: 5, title: 'Karte 5', image: 'https://placehold.co/300x200?text=Karte+5' },
+      { id: 6, title: 'Karte 6', image: 'https://placehold.co/300x200?text=Karte+6' }
+    ];
+    setAllCards(dummyCards);
+    setHand(dummyCards);
   }, []);
 
   // Hilfsfunktion: Hand aktualisieren
@@ -125,89 +130,54 @@ function Game({ playerName, gameId }) {
   const handleGiveHint = async () => {
     if (!selectedCard || !hint.trim()) return;
 
-    try {
-      await fetch(`${API_BASE}/game`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, action: 'giveHint', cardId: selectedCard, hint: hint.trim(), playerId })
-      });
-      setSelectedCard(null);
-      setHint('');
-    } catch (error) {
-      console.error('Error giving hint:', error);
-    }
+    // Dummy-Implementierung ohne Backend
+    console.log('Hint given:', hint, 'for card:', selectedCard);
+    setSelectedCard(null);
+    setHint('');
   };
 
   /**
    * Behandelt die Kartenauswahl durch Nicht-Erzähler
    */
   const handleChooseCard = async (cardId) => {
-    try {
-      await fetch(`${API_BASE}/game`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, action: 'chooseCard', cardId, playerId })
-      });
-      setSelectedCard(cardId);
-    } catch (error) {
-      console.error('Error choosing card:', error);
-    }
+    // Dummy-Implementierung ohne Backend
+    console.log('Card chosen:', cardId);
+    setSelectedCard(cardId);
   };
 
   /**
    * Behandelt die Stimmabgabe für eine Karte
    */
   const handleVote = async (cardId) => {
-    try {
-      await fetch(`${API_BASE}/game`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, action: 'vote', cardId, playerId })
-      });
-    } catch (error) {
-      console.error('Error voting:', error);
-    }
+    // Dummy-Implementierung ohne Backend
+    console.log('Vote for card:', cardId);
   };
 
   /**
    * Behandelt den Übergang zur nächsten Runde
    */
   const handleContinueToNextRound = async () => {
-    try {
-      await fetch(`${API_BASE}/game`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, action: 'nextRound' })
-      });
-    } catch (error) {
-      console.error('Error continuing to next round:', error);
-    }
+    // Dummy-Implementierung ohne Backend
+    console.log('Continue to next round');
   };
 
   /**
    * Behandelt den Neustart des Spiels
    */
   const handleRestartGame = async () => {
-    try {
-      await fetch(`${API_BASE}/game`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, action: 'restart' })
-      });
-      setGameWinner(null);
-      setRevealInfo(null);
-      setRevealTimer(null);
-      setScoreChanges([]);
-      setPointsEarned(null);
-      setGame(null);
-      setPhase('waiting');
-      setHand([]);
-      setSelectedCard(null);
-      setHint('');
-      setMixedCards([]);
-    } catch (error) {
-      console.error('Error restarting game:', error);
-    }
+    // Dummy-Implementierung ohne Backend
+    console.log('Restart game');
+    setGameWinner(null);
+    setRevealInfo(null);
+    setRevealTimer(null);
+    setScoreChanges([]);
+    setPointsEarned(null);
+    setGame(null);
+    setPhase('waiting');
+    setHand([]);
+    setSelectedCard(null);
+    setHint('');
+    setMixedCards([]);
   };
 
   /**
