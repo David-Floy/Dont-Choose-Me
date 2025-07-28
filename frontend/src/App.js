@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
 import audioManager from './utils/AudioManager';
-import './App.css';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
