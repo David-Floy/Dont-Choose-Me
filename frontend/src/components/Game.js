@@ -4,8 +4,8 @@ import Card from './Card';
 const API_BASE = '/api';
 
 /**
- * Haupt-Spielkomponente für das PicMe-Spiel
- * @param {string} props.gameId - ID des Spielraums
+ * Main game component for the PicMe game
+ * @param {string} props.gameId - ID of the game room
  */
 function Game({ playerName, gameId }) {
   // === STATE MANAGEMENT ===
@@ -23,7 +23,7 @@ function Game({ playerName, gameId }) {
   const [gameWinner, setGameWinner] = useState(null);
   const [playerId, setPlayerId] = useState(localStorage.getItem('playerId'));
 
-  // Polling für Spielstatus
+  // Polling for game status
   useEffect(() => {
     let interval = setInterval(async () => {
       try {
@@ -45,7 +45,7 @@ function Game({ playerName, gameId }) {
     return () => clearInterval(interval);
   }, [gameId, playerName]);
 
-  // Karten laden
+  // Load cards
   useEffect(() => {
     fetch('/api/cards')
       .then(res => res.json())
@@ -53,7 +53,7 @@ function Game({ playerName, gameId }) {
       .catch(() => setAllCards([]));
   }, []);
 
-  // Hilfsfunktion: Hand aktualisieren
+  // Helper function: Update hand
   const updateHand = (gameData) => {
     if (gameData && gameData.players) {
       const me = gameData.players.find(p => p.name === playerName);
@@ -61,7 +61,7 @@ function Game({ playerName, gameId }) {
     }
   };
 
-  // Hilfsfunktion: Berechne die aktuelle Phase
+  // Helper function: Calculate current phase
   useEffect(() => {
     if (game) {
       let newPhase = 'waiting';
@@ -85,9 +85,9 @@ function Game({ playerName, gameId }) {
           const player = game.players.find(p => p.id === v.playerId);
           return player?.name === playerName;
         });
-        // Erzähler bekommt spezielle Voting-Phase zum Beobachten
+        // Storyteller gets special voting phase for observation
         if (storyteller?.name === playerName) {
-          newPhase = 'voteWatch'; // Neue Phase für Erzähler
+          newPhase = 'voteWatch'; // New phase for storyteller
         } else {
           newPhase = hasVoted ? 'waiting' : 'vote';
         }
@@ -97,7 +97,7 @@ function Game({ playerName, gameId }) {
 
       setPhase(newPhase);
 
-      // Reveal-Infos setzen
+      // Set reveal info
       if (newPhase === 'reveal' && game.votes && game.selectedCards && game.votes.length > 0 && game.selectedCards.length > 0) {
         const votesPerCard = {};
         game.votes.forEach(v => {
@@ -123,7 +123,7 @@ function Game({ playerName, gameId }) {
   // === GAME ACTIONS ===
 
   /**
-   * Behandelt das Geben eines Hinweises durch den Erzähler
+   * Handles giving a hint by the storyteller
    */
   const handleGiveHint = async () => {
     if (!selectedCard || !hint.trim()) return;
@@ -148,7 +148,7 @@ function Game({ playerName, gameId }) {
   };
 
   /**
-   * Behandelt die Kartenauswahl
+   * Handles card selection
    */
   const handleChooseCard = async (cardId) => {
     try {
@@ -169,7 +169,7 @@ function Game({ playerName, gameId }) {
   };
 
   /**
-   * Behandelt die Stimmabgabe für eine Karte
+   * Handles voting for a card
    */
   const handleVote = async (cardId) => {
     try {
@@ -189,7 +189,7 @@ function Game({ playerName, gameId }) {
   };
 
   /**
-   * Behandelt den Übergang zur nächsten Runde
+   * Handles transition to next round
    */
   const handleContinueToNextRound = async () => {
     try {
@@ -208,7 +208,7 @@ function Game({ playerName, gameId }) {
   };
 
   /**
-   * Behandelt den Neustart des Spiels
+   * Handles game restart
    */
   const handleRestartGame = async () => {
     try {
@@ -238,7 +238,7 @@ function Game({ playerName, gameId }) {
   };
 
   /**
-   * Berechnet wer Punkte bekommt und warum (für Reveal-Phase)
+   * Calculates who gets points and why (for reveal phase)
    */
   const calculatePointsDistribution = (game) => {
     if (!game || !game.votes || !Array.isArray(game.votes) || !game.selectedCards || !Array.isArray(game.selectedCards) || game.selectedCards.length === 0) {
@@ -320,7 +320,7 @@ function Game({ playerName, gameId }) {
   // === RENDER HELPERS ===
 
   /**
-   * Rendert die Warte-Phase
+   * Renders the waiting phase
    */
   const renderWaitingPhase = () => {
     const isStoryteller = game?.players?.[game?.storytellerIndex]?.name === playerName;
@@ -333,7 +333,7 @@ function Game({ playerName, gameId }) {
             <p>Warte, bis alle Spieler ihre Karten ausgewählt haben...</p>
             <p>Fortschritt: {game.selectedCards.length} / {game.players.length} Karten gewählt</p>
 
-            {/* Erzähler sieht die bereits gelegten Karten */}
+            {/* Storyteller sees already placed cards */}
             {isStoryteller && game.selectedCards.length > 1 && (
               <div style={{ marginTop: '20px' }}>
                 <h4>Von anderen Spielern gelegte Karten:</h4>
@@ -384,7 +384,7 @@ function Game({ playerName, gameId }) {
   };
 
   /**
-   * Rendert die Hinweis-Gabe-Phase für den Erzähler
+   * Renders the hint-giving phase for the storyteller
    */
   const renderGiveHintPhase = () => (
     <div style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '16px', color: 'white', textAlign: 'center' }}>
@@ -501,7 +501,7 @@ function Game({ playerName, gameId }) {
   );
 
   /**
-   * Rendert die Kartenauswahl-Phase
+   * Renders the card selection phase
    */
   const renderChooseCardPhase = () => (
     <div style={{ padding: '20px', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', borderRadius: '16px', color: 'white', textAlign: 'center' }}>
@@ -615,7 +615,7 @@ function Game({ playerName, gameId }) {
   );
 
   /**
-   * Rendert die Abstimmungs-Phase
+   * Renders the voting phase
    */
   const renderVotePhase = () => {
     const myPlayer = game?.players?.find(p => p.name === playerName);
@@ -756,7 +756,7 @@ function Game({ playerName, gameId }) {
   };
 
   /**
-   * Rendert die Erzähler-Beobachtungsphase während des Votings
+   * Renders the storyteller observation phase during voting
    */
   const renderVoteWatchPhase = () => {
     return (
@@ -929,7 +929,7 @@ function Game({ playerName, gameId }) {
   };
 
   /**
-   * Rendert das permanente Scoreboard
+   * Renders the permanent scoreboard
    */
   const renderScoreboard = () => (
     <div style={{
@@ -972,7 +972,7 @@ function Game({ playerName, gameId }) {
   );
 
   /**
-   * Rendert die Ergebnis-Phase inkl. Scoreboard
+   * Renders the results phase including scoreboard
    */
   const renderResultsPhase = () => (
     <div>
@@ -1009,10 +1009,10 @@ function Game({ playerName, gameId }) {
   );
 
   /**
-   * Rendert die Reveal-Phase nach dem Voting
+   * Renders the reveal phase after voting
    */
   const renderRevealPhase = () => {
-    // Erweiterte Sicherheitschecks
+    // Extended safety checks
     if (!game) {
       return (
         <div>
@@ -1188,7 +1188,7 @@ function Game({ playerName, gameId }) {
   };
 
   /**
-   * Rendert den Spielende-Bildschirm
+   * Renders the game end screen
    */
   const renderGameEndPhase = () => {
     const winner = gameWinner?.winner || game?.winner;
@@ -1344,7 +1344,7 @@ function Game({ playerName, gameId }) {
           </p>
         </div>
 
-        {/* Permanentes Scoreboard */}
+        {/* Permanent scoreboard */}
         {game.state === 'playing' && renderScoreboard()}
 
         <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px' }}>

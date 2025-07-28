@@ -7,7 +7,7 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   const [isInLobby, setIsInLobby] = useState(false);
   const [error, setError] = useState('');
 
-  // Polling für Lobby-Updates
+  // Polling for lobby updates
   useEffect(() => {
     if (!isInLobby || !gameId) return;
 
@@ -23,7 +23,7 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
           const data = await response.json();
           setPlayers(data.game.players || []);
 
-          // Prüfe ob Spiel gestartet wurde
+          // Check if game has started
           if (data.game.state === 'playing') {
             onGameStart();
           }
@@ -37,7 +37,7 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   }, [isInLobby, gameId, playerName, onGameStart]);
 
   const handleJoinLobby = async () => {
-    // Client-seitige Vorvalidierung (für bessere UX)
+    // Client-side pre-validation (for better UX)
     if (!playerName.trim()) {
       setError('Bitte gib einen Spielernamen ein!');
       return;
@@ -67,13 +67,13 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
       return;
     }
 
-    // Prüfe auf erlaubte Zeichen für Spielername
+    // Check allowed characters for player name
     if (!/^[a-zA-ZäöüÄÖÜß0-9\s]+$/.test(playerName.trim())) {
       setError('Spielername darf nur Buchstaben, Zahlen und Leerzeichen enthalten!');
       return;
     }
 
-    // Prüfe auf erlaubte Zeichen für Raum-ID
+    // Check allowed characters for room ID
     if (!/^[a-zA-Z0-9_-]+$/.test(gameId.trim())) {
       setError('Raum-ID darf nur Buchstaben, Zahlen, Bindestriche und Unterstriche enthalten!');
       return;
@@ -108,7 +108,7 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   };
 
   const handleStartGame = async () => {
-    // Client-seitige Vorvalidierung
+    // Client-side pre-validation
     if (players.length < 3) {
       setError('Mindestens 3 Spieler werden benötigt!');
       return;

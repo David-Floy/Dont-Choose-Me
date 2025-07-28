@@ -1,5 +1,12 @@
 import React from 'react';
 
+/**
+ * Card component for displaying game cards with interactive features
+ * @param {Object} card - Card object with id, title, and image properties
+ * @param {Function} onClick - Click handler function
+ * @param {boolean} selected - Whether the card is currently selected
+ * @param {Object} style - Additional styling overrides
+ */
 function Card({ card, onClick, selected, style = {} }) {
   return (
     <div
@@ -46,6 +53,7 @@ function Card({ card, onClick, selected, style = {} }) {
           transition: 'filter 0.3s ease'
         }}
         onError={(e) => {
+          // Fallback image if card image fails to load
           e.target.src = `https://placehold.co/250x200/cccccc/666666?text=Card+${card.id}`;
         }}
       />

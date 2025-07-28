@@ -6,17 +6,17 @@ const GameManager = require('./server/gameManager');
 
 /**
  * PicMe Game Server
- * Verwaltet Spiele über REST API und statische Dateien
+ * Manages games via REST API and serves static files
  */
 
 // === SERVER SETUP ===
 const app = express();
 const server = http.createServer(app);
 
-// Produktions- vs Entwicklungsumgebung
+// Production vs Development environment
 const isProduction = process.env.NODE_ENV === 'production';
 
-// CORS Middleware für alle Origins in Produktion
+// CORS Middleware for all origins in production
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -41,7 +41,7 @@ const gameManager = new GameManager();
 // === INITIALIZATION ===
 
 /**
- * Lädt die Karten aus der JSON-Datei
+ * Loads cards from the JSON file
  */
 function loadCards() {
   const cardsPath = path.join(__dirname, 'cards.json');
@@ -65,12 +65,12 @@ function loadCards() {
 
 // === EXPRESS ROUTES ===
 
-// API-Route für Karten
+// API route for cards
 app.get('/api/cards', (req, res) => {
   res.json(cards);
 });
 
-// Hauptspiel-API-Endpunkt
+// Main game API endpoint
 app.post('/api/game', (req, res) => {
   const { gameId, action, playerName, cardId, hint } = req.body;
 
@@ -111,7 +111,7 @@ app.post('/api/game', (req, res) => {
             hintGame.selectedCards = [{ cardId, playerId: player.id }];
             hintGame.phase = 'selectCards';
 
-            // Karte aus Hand entfernen
+            // Remove card from hand
             player.hand = player.hand.filter(card => card.id != cardId);
 
             res.json({ success: true, game: hintGame });
@@ -128,13 +128,13 @@ app.post('/api/game', (req, res) => {
         if (chooseGame) {
           const player = chooseGame.players.find(p => p.name === playerName);
           if (player) {
-            // Prüfe ob Spieler bereits eine Karte gewählt hat
+            // Check if player has already selected a card
             const hasSelected = chooseGame.selectedCards.find(sc => sc.playerId === player.id);
             if (!hasSelected) {
               chooseGame.selectedCards.push({ cardId, playerId: player.id });
               player.hand = player.hand.filter(card => card.id != cardId);
 
-              // Alle Karten gewählt?
+              // All cards selected?
               if (chooseGame.selectedCards.length === chooseGame.players.length) {
                 chooseGame.mixedCards = shuffle([...chooseGame.selectedCards]);
                 chooseGame.phase = 'voting';
@@ -156,16 +156,16 @@ app.post('/api/game', (req, res) => {
           if (player) {
             if (!voteGame.votes) voteGame.votes = [];
 
-            // Prüfe ob bereits gestimmt
+            // Check if already voted
             const hasVoted = voteGame.votes.find(v => v.playerId === player.id);
             if (!hasVoted) {
               voteGame.votes.push({ cardId, playerId: player.id });
 
-              // Alle Stimmen abgegeben?
+              // All votes cast?
               if (voteGame.votes.length === voteGame.players.length - 1) {
                 const results = calculatePoints(voteGame);
 
-                // Prüfe auf Spielende
+                // Check for game end
                 const winner = voteGame.players.find(p => p.points >= 30);
                 if (winner) {
                   voteGame.phase = 'gameEnd';
@@ -204,10 +204,10 @@ app.post('/api/game', (req, res) => {
   }
 });
 
-// Statische Dateien für Bilder servieren
+// Serve static files for images
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
-// Statische Dateien servieren - nur in Produktion
+// Serve static files - only in production
 if (isProduction) {
   const buildPath = path.join(__dirname, 'build');
   console.log(`🔍 Suche Build-Ordner in: ${buildPath}`);
@@ -216,7 +216,7 @@ if (isProduction) {
     app.use(express.static(buildPath));
     console.log(`✅ Serving static files from: ${buildPath}`);
     
-    // Fallback-Route für SPA
+    // Fallback route for SPA
     app.get('*', (req, res) => {
       const indexPath = path.join(buildPath, 'index.html');
       console.log(`📄 Serving index.html from: ${indexPath}`);
@@ -226,7 +226,7 @@ if (isProduction) {
     console.error('❌ Build-Ordner nicht gefunden!');
     console.error('💡 Führe "npm run build:all" aus oder stelle sicher, dass der Build-Prozess erfolgreich war.');
     
-    // Fallback für fehlenden Build
+    // Fallback for missing build
     app.get('*', (req, res) => {
       res.status(503).send(`
         <h1>🚧 Service wird aufgebaut...</h1>
@@ -238,7 +238,7 @@ if (isProduction) {
     });
   }
 } else {
-  // Entwicklungsumgebung - zeige Infoseite
+  // Development environment - show info page
   app.get('/', (req, res) => {
     res.send(`
       <h1>PicMe Server läuft!</h1>
@@ -249,7 +249,7 @@ if (isProduction) {
   });
 }
 
-// Health-Check Route für Deployment
+// Health check route for deployment
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -262,7 +262,9 @@ app.get('/health', (req, res) => {
 // === UTILITY FUNCTIONS ===
 
 /**
- * Mischt ein Array zufällig (Fisher-Yates Shuffle)
+ * Shuffles an array randomly using Fisher-Yates shuffle algorithm
+ * @param {Array} array - Array to shuffle
+ * @returns {Array} - New shuffled array
  */
 function shuffle(array) {
   const shuffled = [...array];
@@ -274,7 +276,9 @@ function shuffle(array) {
 }
 
 /**
- * Berechnet die Punkte am Ende einer Runde
+ * Calculates points at the end of a round based on game rules
+ * @param {Object} game - Game object containing players, votes, and selected cards
+ * @returns {Object} - Result object with scoring details
  */
 function calculatePoints(game) {
   const storytellerId = game.selectedCards[0].playerId;
@@ -285,7 +289,7 @@ function calculatePoints(game) {
   const allCorrect = correctVotes === votes.length;
   const noneCorrect = correctVotes === 0;
 
-  // Punkte für den Erzähler
+  // Points for the storyteller
   for (const player of game.players) {
     if (player.id === storytellerId) {
       if (!noneCorrect && !allCorrect) {
@@ -294,7 +298,7 @@ function calculatePoints(game) {
     }
   }
 
-  // Punkte für richtige Stimmen
+  // Points for correct votes
   for (const vote of votes) {
     if (vote.cardId === correctCardId) {
       const player = game.players.find(p => p.id === vote.playerId);
@@ -304,7 +308,7 @@ function calculatePoints(game) {
     }
   }
 
-  // Punkte für eigene Karten die Stimmen bekommen haben
+  // Points for own cards that received votes
   for (const vote of votes) {
     if (vote.cardId !== correctCardId) {
       const cardOwner = game.selectedCards.find(sc => sc.cardId === vote.cardId);
@@ -317,7 +321,7 @@ function calculatePoints(game) {
     }
   }
 
-  // Alle anderen bekommen Punkte wenn niemand oder alle richtig geraten haben
+  // All others get points if nobody or everyone guessed correctly
   if (noneCorrect || allCorrect) {
     for (const player of game.players) {
       if (player.id !== storytellerId) {
@@ -356,7 +360,7 @@ server.listen(PORT, '0.0.0.0', () => {
   }
 });
 
-// Graceful shutdown
+// Graceful shutdown handlers
 process.on('SIGTERM', () => {
   console.log('📝 SIGTERM empfangen, starte graceful shutdown...');
   server.close(() => {
