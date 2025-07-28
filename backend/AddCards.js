@@ -2,13 +2,13 @@ const fs = require('fs');
 const path = require('path');
 
 const importDir = path.join(__dirname, 'import');
-const imagesDir = path.join(__dirname, 'images');
+const imagesDir = path.join(__dirname, '..', 'frontend', 'public', 'images');
 const cardsPath = path.join(__dirname, 'cards.json');
 
 // Stelle sicher, dass der images-Ordner existiert
 if (!fs.existsSync(imagesDir)) {
     fs.mkdirSync(imagesDir, { recursive: true });
-    console.log('Images-Ordner erstellt');
+    console.log('images-Ordner erstellt');
 }
 
 // Stelle sicher, dass der import-Ordner existiert
@@ -62,7 +62,7 @@ imageFiles.forEach((file, index) => {
     }
 
     try {
-        // Verschiebe Datei von import/ nach images/
+        // Verschiebe Datei von import/ nach frontend/public/images/
         fs.copyFileSync(sourcePath, targetPath);
         fs.unlinkSync(sourcePath);
 
@@ -70,13 +70,13 @@ imageFiles.forEach((file, index) => {
         const newCard = {
             id: nextId,
             title: `Card #${nextId}`,
-            image: `/images/${file}`
+            image: `images/${file}`
         };
 
         newCards.push(newCard);
         nextId++;
 
-        console.log(`✅ ${file} -> images/ (ID: ${newCard.id})`);
+        console.log(`✅ ${file} -> frontend/public/images/ (ID: ${newCard.id})`);
     } catch (error) {
         console.error(`❌ Fehler beim Verarbeiten von ${file}:`, error.message);
     }
