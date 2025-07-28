@@ -46,7 +46,7 @@ function Card({ card, onClick, selected, style = {} }) {
           transition: 'filter 0.3s ease'
         }}
         onError={(e) => {
-          e.target.src = `https://via.placeholder.com/250x200/cccccc/666666?text=Card+${card.id}`;
+          e.target.src = `https://placehold.co/250x200/cccccc/666666?text=Card+${card.id}`;
         }}
       />
     </div>
