@@ -16,9 +16,9 @@ function Card({ card, onClick, selected, style = {} }) {
     cursor: onClick ? 'pointer' : 'default',
     transition: 'transform 0.2s, box-shadow 0.2s',
     position: 'relative',
-    width: '100%',   // Hinzugefügt, um responsive Breite zu unterstützen
-    maxWidth: '100%',
-    height: 'auto',  // Sicherstellen, dass die Höhe proportional bleibt
+    width: '100%',
+    maxWidth: '200px',  // Begrenzte maximale Breite
+    height: 'auto',
     display: 'flex',
     flexDirection: 'column'
   };
@@ -27,10 +27,10 @@ function Card({ card, onClick, selected, style = {} }) {
 
   const imageStyle = {
     width: '100%',
-    height: 'auto',
+    height: '150px',  // Feste Höhe für alle Bilder
     objectFit: 'cover',
-    aspectRatio: '4/3', // Sicherstellen, dass alle Karten das gleiche Seitenverhältnis haben
-    display: 'block'
+    display: 'block',
+    aspectRation: '4/3'
   };
 
   return (

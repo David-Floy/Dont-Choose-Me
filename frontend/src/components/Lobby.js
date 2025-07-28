@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import VolumeControl from './VolumeControl';
 
 const API_BASE = '/api';
 
@@ -6,6 +7,38 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   const [players, setPlayers] = useState([]);
   const [isInLobby, setIsInLobby] = useState(false);
   const [error, setError] = useState('');
+  const [volume, setVolume] = useState(() => {
+    // Versuche den Volume-Wert aus dem localStorage zu laden oder nutze 0.7 als Standard
+    const savedVolume = localStorage.getItem('gameVolume');
+    return savedVolume !== null ? parseFloat(savedVolume) : 0.7;
+  });
+  const [playedLobbySound, setPlayedLobbySound] = useState(false);
+  const lobbyAudioRef = useRef(null);
+
+  // Sound-Effekt für Lobby initialisieren, wenn noch nicht abgespielt
+  useEffect(() => {
+    if (isInLobby && !playedLobbySound) {
+      if (lobbyAudioRef.current) {
+        lobbyAudioRef.current.volume = volume;
+        lobbyAudioRef.current.play().catch(err => {
+          console.log("Audio konnte nicht abgespielt werden:", err);
+        });
+        setPlayedLobbySound(true);
+      }
+    } else if (!isInLobby) {
+      setPlayedLobbySound(false);
+    }
+  }, [isInLobby, playedLobbySound, volume]);
+
+  // Speichern des Lautstärkewerts im localStorage
+  useEffect(() => {
+    localStorage.setItem('gameVolume', volume.toString());
+
+    // Aktualisiere die Lautstärke für alle Audio-Elemente
+    if (lobbyAudioRef.current) {
+      lobbyAudioRef.current.volume = volume;
+    }
+  }, [volume]);
 
   // Polling für Lobby-Updates
   useEffect(() => {
@@ -144,9 +177,25 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
     setError('');
   };
 
+  /**
+   * Behandelt die Lautstärkeänderung
+   */
+  const handleVolumeChange = (newVolume) => {
+    setVolume(newVolume);
+  };
+
   if (!isInLobby) {
     return (
-      <div>
+      <div style={{ position: 'relative' }}>
+        {/* Lautstärkeregler in der rechten oberen Ecke */}
+        <div style={{
+          position: 'absolute',
+          right: '15px',
+          top: '15px'
+        }}>
+          <VolumeControl volume={volume} onChange={handleVolumeChange} />
+        </div>
+
         {/* Join Form */}
         <div style={{ marginBottom: '30px' }}>
           <div style={{ marginBottom: '20px' }}>
@@ -316,12 +365,27 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
             ))}
           </div>
         </div>
+
+        {/* Audio Element für den Lobby Sound */}
+        <audio ref={lobbyAudioRef} loop>
+          <source src="/sounds/lobby.mp3" type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
       </div>
     );
   }
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      {/* Lautstärkeregler in der rechten oberen Ecke */}
+      <div style={{
+        position: 'absolute',
+        right: '15px',
+        top: '15px'
+      }}>
+        <VolumeControl volume={volume} onChange={handleVolumeChange} />
+      </div>
+
       {/* Lobby Header */}
       <div style={{
         background: 'rgba(255,255,255,0.1)',
@@ -542,6 +606,12 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
           Raum-Code: {gameId}
         </div>
       </div>
+
+      {/* Audio Element für den Lobby Sound */}
+      <audio ref={lobbyAudioRef} loop>
+        <source src="/sounds/lobby.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
     </div>
   );
 }

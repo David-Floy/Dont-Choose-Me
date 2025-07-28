@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import Card from './Card';
 // Animationen für Karten
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
+import VolumeControl from './VolumeControl';
 
 const API_BASE = '/api';
 
@@ -25,6 +26,11 @@ function Game({ playerName, gameId }) {
   const [gameWinner, setGameWinner] = useState(null);
   const [playerId, setPlayerId] = useState(localStorage.getItem('playerId'));
   const [playedVoteSound, setPlayedVoteSound] = useState(false);
+  const [volume, setVolume] = useState(() => {
+    // Versuche den Volume-Wert aus dem localStorage zu laden oder nutze 0.7 als Standard
+    const savedVolume = localStorage.getItem('gameVolume');
+    return savedVolume !== null ? parseFloat(savedVolume) : 0.7;
+  });
   const voteAudioRef = useRef(null);
 
   // Polling für Spielstatus
@@ -128,6 +134,7 @@ function Game({ playerName, gameId }) {
   useEffect(() => {
     if ((phase === 'vote' || phase === 'voteWatch') && !playedVoteSound) {
       if (voteAudioRef.current) {
+        voteAudioRef.current.volume = volume;
         voteAudioRef.current.play().catch(err => {
           console.log("Audio konnte nicht abgespielt werden:", err);
         });
@@ -136,7 +143,17 @@ function Game({ playerName, gameId }) {
     } else if (phase !== 'vote' && phase !== 'voteWatch') {
       setPlayedVoteSound(false);
     }
-  }, [phase, playedVoteSound]);
+  }, [phase, playedVoteSound, volume]);
+
+  // Speichern des Lautstärkewerts im localStorage
+  useEffect(() => {
+    localStorage.setItem('gameVolume', volume.toString());
+
+    // Aktualisiere die Lautstärke für alle Audio-Elemente
+    if (voteAudioRef.current) {
+      voteAudioRef.current.volume = volume;
+    }
+  }, [volume]);
 
   // === GAME ACTIONS ===
 
@@ -206,6 +223,7 @@ function Game({ playerName, gameId }) {
       // Sound abspielen beim Voting
       if (voteAudioRef.current) {
         voteAudioRef.current.currentTime = 0;
+        voteAudioRef.current.volume = volume;
         voteAudioRef.current.play().catch(err => {
           console.log("Audio konnte nicht abgespielt werden:", err);
         });
@@ -847,117 +865,131 @@ function Game({ playerName, gameId }) {
           🎯 Wähle die Karte des Erzählers:
         </h4>
 
-        {/* Karten-Grid mit max. 3 Karten pro Reihe */}
+        {/* Karten-Container mit verbessertem Layout */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))',
-          gap: '20px',
+          maxWidth: '900px',
+          margin: '0 auto',
           padding: '20px',
           background: 'rgba(255,255,255,0.1)',
           borderRadius: '12px',
           backdropFilter: 'blur(10px)',
-          maxWidth: '800px',
-          margin: '0 auto'
         }}>
-          {mixedCards.map(({ cardId }) => {
-            const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
-            let card = combinedCards.find(c => c.id === cardId);
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: '20px',
+            justifyContent: 'center',
+            justifyItems: 'center',
+            width: '100%',
+          }}>
+            {mixedCards.map(({ cardId }) => {
+              const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
+              let card = combinedCards.find(c => c.id === cardId);
 
-            if (!card) {
-              card = {
-                id: cardId,
-                title: `Karte ${cardId}`,
-                image: `https://placehold.co/300x200?text=Karte+${cardId}`
-              };
-            }
+              if (!card) {
+                card = {
+                  id: cardId,
+                  title: `Karte ${cardId}`,
+                  image: `https://placehold.co/300x200?text=Karte+${cardId}`
+                };
+              }
 
-            // Prüfe ob das die eigene Karte ist
-            const isMyCard = mySelectedCard && mySelectedCard.cardId === cardId;
-            // Prüfe ob für diese Karte bereits abgestimmt wurde
-            const hasVotedForThisCard = game?.votes?.some(v => {
-              const voter = game.players.find(p => p.id === v.playerId);
-              return voter?.name === playerName && v.cardId === cardId;
-            });
+              // Prüfe ob das die eigene Karte ist
+              const isMyCard = mySelectedCard && mySelectedCard.cardId === cardId;
+              // Prüfe ob für diese Karte bereits abgestimmt wurde
+              const hasVotedForThisCard = game?.votes?.some(v => {
+                const voter = game.players.find(p => p.id === v.playerId);
+                return voter?.name === playerName && v.cardId === cardId;
+              });
 
-            return (
-              <div key={cardId} style={{ position: 'relative' }}>
-                {/* Label für "Your Card" */}
-                {isMyCard && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-12px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#28a745',
-                    color: 'white',
-                    padding: '6px 12px',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    zIndex: 1,
-                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
-                  }}>
-                    🏷️ Deine Karte
-                  </div>
-                )}
+              return (
+                <div key={cardId} style={{
+                  position: 'relative',
+                  width: '100%',
+                  display: 'flex',
+                  justifyContent: 'center'
+                }}>
+                  {/* Label für "Your Card" */}
+                  {isMyCard && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-12px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: '#28a745',
+                      color: 'white',
+                      padding: '6px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      zIndex: 1,
+                      boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
+                    }}>
+                      🏷️ Deine Karte
+                    </div>
+                  )}
 
-                {hasVotedForThisCard && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '-10px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#007bff',
-                    color: 'white',
-                    padding: '4px 10px',
-                    borderRadius: '10px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    zIndex: 1,
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    ✓ Gewählt
-                  </div>
-                )}
+                  {hasVotedForThisCard && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '-10px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: '#007bff',
+                      color: 'white',
+                      padding: '4px 10px',
+                      borderRadius: '10px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      zIndex: 1,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                    }}>
+                      ✓ Gewählt
+                    </div>
+                  )}
 
-                <Card
-                  card={card}
-                  onClick={() => !isMyCard && handleVote(cardId)}
-                  style={{
-                    opacity: isMyCard ? 0.7 : 1,
-                    border: isMyCard
-                      ? '4px solid #28a745'
-                      : hasVotedForThisCard
-                        ? '4px solid #007bff'
-                        : '2px solid rgba(255,255,255,0.3)',
-                    cursor: isMyCard ? 'not-allowed' : 'pointer',
-                    borderRadius: '12px',
-                    transition: 'all 0.3s cubic-bezier(.68,-0.55,.27,1.55)',
-                    boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
-                    filter: isMyCard ? 'grayscale(30%)' : 'none'
-                  }}
-                />
-                {isMyCard && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%) rotate(-15deg)',
-                    color: '#dc3545',
-                    background: 'rgba(255,255,255,0.8)',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    fontWeight: 'bold',
-                    fontSize: '16px',
-                    pointerEvents: 'none',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
-                  }}>
-                    NICHT WÄHLBAR
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  <Card
+                    card={card}
+                    onClick={() => !isMyCard && handleVote(cardId)}
+                    style={{
+                      opacity: isMyCard ? 0.7 : 1,
+                      border: isMyCard
+                        ? '4px solid #28a745'
+                        : hasVotedForThisCard
+                          ? '4px solid #007bff'
+                          : '2px solid rgba(255,255,255,0.3)',
+                      cursor: isMyCard ? 'not-allowed' : 'pointer',
+                      borderRadius: '12px',
+                      transition: 'all 0.3s cubic-bezier(.68,-0.55,.27,1.55)',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+                      filter: isMyCard ? 'grayscale(30%)' : 'none',
+                      width: '100%',
+                      maxWidth: '200px',
+                      height: 'auto',
+                    }}
+                  />
+                  {isMyCard && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%) rotate(-15deg)',
+                      color: '#dc3545',
+                      background: 'rgba(255,255,255,0.8)',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontWeight: 'bold',
+                      fontSize: '16px',
+                      pointerEvents: 'none',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                    }}>
+                      NICHT WÄHLBAR
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Voting-Status */}
@@ -1038,98 +1070,112 @@ function Game({ playerName, gameId }) {
           🃏 Die gelegten Karten mit Besitzern:
         </h4>
 
-        {/* Karten-Grid mit max. 3 Karten pro Reihe */}
+        {/* Karten-Container mit verbessertem Layout */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))',
-          gap: '20px',
+          maxWidth: '900px',
+          margin: '0 auto',
           padding: '20px',
           background: 'rgba(255,255,255,0.1)',
           borderRadius: '12px',
           backdropFilter: 'blur(10px)',
-          maxWidth: '800px',
-          margin: '0 auto'
         }}>
-          {mixedCards.map(({ cardId }) => {
-            const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
-            let card = combinedCards.find(c => c.id === cardId);
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: '20px',
+            justifyContent: 'center',
+            justifyItems: 'center',
+            width: '100%',
+          }}>
+            {mixedCards.map(({ cardId }) => {
+              const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
+              let card = combinedCards.find(c => c.id === cardId);
 
-            if (!card) {
-              card = {
-                id: cardId,
-                title: `Karte ${cardId}`,
-                image: `https://placehold.co/300x200?text=Karte+${cardId}`
-              };
-            }
+              if (!card) {
+                card = {
+                  id: cardId,
+                  title: `Karte ${cardId}`,
+                  image: `https://placehold.co/300x200?text=Karte+${cardId}`
+                };
+              }
 
-            // Finde den Spieler der diese Karte gelegt hat
-            const cardOwner = game?.selectedCards?.find(sc => sc.cardId === cardId);
-            const ownerPlayer = cardOwner ? game.players.find(p => p.id === cardOwner.playerId) : null;
-            const isMyCard = cardOwner && cardOwner.playerId === game?.players?.[game?.storytellerIndex]?.id;
+              // Finde den Spieler der diese Karte gelegt hat
+              const cardOwner = game?.selectedCards?.find(sc => sc.cardId === cardId);
+              const ownerPlayer = cardOwner ? game.players.find(p => p.id === cardOwner.playerId) : null;
+              const isMyCard = cardOwner && cardOwner.playerId === game?.players?.[game?.storytellerIndex]?.id;
 
-            // Prüfe ob bereits Stimmen für diese Karte abgegeben wurden
-            const votesForThisCard = game?.votes?.filter(v => v.cardId === cardId) || [];
+              // Prüfe ob bereits Stimmen für diese Karte abgegeben wurden
+              const votesForThisCard = game?.votes?.filter(v => v.cardId === cardId) || [];
 
-            return (
-              <div key={cardId} style={{ position: 'relative' }}>
-                {/* Label mit Spielername */}
-                {ownerPlayer && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-12px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: isMyCard ? '#ffd700' : '#6c757d',
-                    color: isMyCard ? '#333' : 'white',
-                    padding: '6px 12px',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    zIndex: 1,
-                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
-                  }}>
-                    {isMyCard ? '👑 Deine Karte' : `👤 ${ownerPlayer.name}`}
-                  </div>
-                )}
+              return (
+                <div key={cardId} style={{
+                  position: 'relative',
+                  width: '100%',
+                  display: 'flex',
+                  justifyContent: 'center'
+                }}>
+                  {/* Label mit Spielername */}
+                  {ownerPlayer && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-12px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: isMyCard ? '#ffd700' : '#6c757d',
+                      color: isMyCard ? '#333' : 'white',
+                      padding: '6px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      zIndex: 1,
+                      boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
+                    }}>
+                      {isMyCard ? '👑 Deine Karte' : `👤 ${ownerPlayer.name}`}
+                    </div>
+                  )}
 
-                {/* Stimmen-Anzeige */}
-                {votesForThisCard.length > 0 && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '-12px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#28a745',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: '8px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    zIndex: 1,
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                  }}>
-                    🗳️ {votesForThisCard.length} Stimme{votesForThisCard.length !== 1 ? 'n' : ''}
-                  </div>
-                )}
+                  {/* Stimmen-Anzeige */}
+                  {votesForThisCard.length > 0 && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '-12px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: '#28a745',
+                      color: 'white',
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      zIndex: 1,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                    }}>
+                      🗳️ {votesForThisCard.length} Stimme{votesForThisCard.length !== 1 ? 'n' : ''}
+                    </div>
+                  )}
 
-                <Card
-                  card={card}
-                  style={{
-                    border: isMyCard
-                      ? '4px solid #ffd700'
-                      : votesForThisCard.length > 0
-                        ? '3px solid #28a745'
-                        : '2px solid rgba(255,255,255,0.3)',
-                    cursor: 'default',
-                    borderRadius: '12px',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
-                    opacity: votesForThisCard.length > 0 ? 1 : 0.8
-                  }}
-                />
-              </div>
-            );
-          })}
+                  <Card
+                    card={card}
+                    style={{
+                      border: isMyCard
+                        ? '4px solid #ffd700'
+                        : votesForThisCard.length > 0
+                          ? '3px solid #28a745'
+                          : '2px solid rgba(255,255,255,0.3)',
+                      cursor: 'default',
+                      borderRadius: '12px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+                      opacity: votesForThisCard.length > 0 ? 1 : 0.8,
+                      width: '100%',
+                      maxWidth: '200px',
+                      height: 'auto',
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Detaillierte Voting-Status */}
@@ -1232,68 +1278,86 @@ function Game({ playerName, gameId }) {
           Hinweis war: <span style={{color:'#007bff', fontWeight: 'bold'}}>{game?.hint}</span>
         </p>
 
-        {/* Karten-Auflösung mit Grid-Layout */}
+        {/* Karten-Auflösung mit verbessertem Layout */}
         {revealInfo && revealInfo.length > 0 ? (
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))',
-            gap: '16px',
-            justifyContent: 'center',
-            marginBottom: '32px'
+            maxWidth: '900px',
+            margin: '0 auto 32px auto',
           }}>
-            {revealInfo.map(info => {
-              // Karte suchen
-              const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
-              let card = combinedCards.find(c => c.id === info.cardId);
-              if (!card) {
-                card = {
-                  id: info.cardId,
-                  title: `Karte ${info.cardId}`,
-                  image: `https://placehold.co/300x200?text=Karte+${info.cardId}`
-                };
-              }
-              return (
-                <div key={info.cardId} style={{
-                  border: info.isStoryteller ? '4px solid #007bff' : '2px solid #ccc',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  background: info.isStoryteller ? '#e3f2fd' : '#fff',
-                  minWidth: '180px',
-                  textAlign: 'center',
-                  boxShadow: info.isStoryteller ? '0 4px 8px rgba(0,123,255,0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
-                  transition: 'box-shadow 0.3s, border 0.3s'
-                }}>
-                  <Card card={card} />
-                  <div style={{marginTop: '12px', fontSize: '16px'}}>
-                    <strong>{info.playerName}</strong>
-                    {info.isStoryteller && (
-                      <div style={{
-                        color:'#007bff',
-                        fontWeight: 'bold',
-                        marginTop: '4px',
-                        padding: '4px 8px',
-                        background: '#fff',
-                        borderRadius: '8px',
-                        border: '1px solid #007bff'
-                      }}>
-                        🎭 Erzähler
-                      </div>
-                    )}
-                  </div>
-                  <div style={{
-                    marginTop: '8px',
-                    padding: '4px 8px',
-                    background: info.votes > 0 ? '#28a745' : '#6c757d',
-                    color: 'white',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '20px',
+              justifyContent: 'center',
+              justifyItems: 'center',
+            }}>
+              {revealInfo.map(info => {
+                // Karte suchen
+                const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
+                let card = combinedCards.find(c => c.id === info.cardId);
+                if (!card) {
+                  card = {
+                    id: info.cardId,
+                    title: `Karte ${info.cardId}`,
+                    image: `https://placehold.co/300x200?text=Karte+${info.cardId}`
+                  };
+                }
+                return (
+                  <div key={info.cardId} style={{
+                    border: info.isStoryteller ? '4px solid #007bff' : '2px solid #ccc',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: info.isStoryteller ? '#e3f2fd' : '#fff',
+                    textAlign: 'center',
+                    boxShadow: info.isStoryteller ? '0 4px 8px rgba(0,123,255,0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
+                    transition: 'box-shadow 0.3s, border 0.3s',
+                    width: '100%',
                   }}>
-                    {info.votes} Stimme{info.votes !== 1 ? 'n' : ''}
+                    <div style={{
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'center'
+                    }}>
+                      <Card
+                        card={card}
+                        style={{
+                          width: '100%',
+                          maxWidth: '180px',
+                          height: 'auto'
+                        }}
+                      />
+                    </div>
+                    <div style={{marginTop: '12px', fontSize: '16px'}}>
+                      <strong>{info.playerName}</strong>
+                      {info.isStoryteller && (
+                        <div style={{
+                          color:'#007bff',
+                          fontWeight: 'bold',
+                          marginTop: '4px',
+                          padding: '4px 8px',
+                          background: '#fff',
+                          borderRadius: '8px',
+                          border: '1px solid #007bff'
+                        }}>
+                          🎭 Erzähler
+                        </div>
+                      )}
+                    </div>
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '4px 8px',
+                      background: info.votes > 0 ? '#28a745' : '#6c757d',
+                      color: 'white',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}>
+                      {info.votes} Stimme{info.votes !== 1 ? 'n' : ''}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         ) : (
           <div style={{textAlign: 'center', marginBottom: '32px'}}>
@@ -1499,6 +1563,13 @@ function Game({ playerName, gameId }) {
     </div>
   );
 
+  /**
+   * Behandelt die Lautstärkeänderung
+   */
+  const handleVolumeChange = (newVolume) => {
+    setVolume(newVolume);
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -1513,7 +1584,8 @@ function Game({ playerName, gameId }) {
           padding: '20px',
           borderRadius: '16px',
           backdropFilter: 'blur(10px)',
-          color: 'white'
+          color: 'white',
+          position: 'relative'
         }}>
           <h1 style={{
             margin: '0 0 10px 0',
@@ -1526,6 +1598,15 @@ function Game({ playerName, gameId }) {
             Aktueller Spieler: <strong>{playerName}</strong> |
             Erzähler: <strong>{game?.players?.[game?.storytellerIndex]?.name}</strong>
           </p>
+
+          {/* Lautstärkeregler in der rechten oberen Ecke */}
+          <div style={{
+            position: 'absolute',
+            right: '15px',
+            top: '15px'
+          }}>
+            <VolumeControl volume={volume} onChange={handleVolumeChange} />
+          </div>
         </div>
 
         {/* Permanentes Scoreboard */}
