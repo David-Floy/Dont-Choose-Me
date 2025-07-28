@@ -106,17 +106,51 @@ app.post('/api/game', (req, res) => {
         if (hintGame) {
           const player = hintGame.players.find(p => p.name === playerName);
           if (player && hintGame.players[hintGame.storytellerIndex].name === playerName) {
-            hintGame.hint = hint;
+
+            // FIX: Verbesserte Validierung
+            if (!hint || typeof hint !== 'string' || hint.trim().length === 0) {
+              res.status(400).json({ error: 'Hinweis ist erforderlich' });
+              break;
+            }
+
+            if (!cardId) {
+              res.status(400).json({ error: 'Karte muss ausgewählt werden' });
+              break;
+            }
+
+            // Prüfe ob der Spieler die Karte tatsächlich besitzt
+            const hasCard = player.hand.some(card => card.id == cardId);
+            if (!hasCard) {
+              res.status(400).json({ error: 'Gewählte Karte nicht in deiner Hand' });
+              break;
+            }
+
+            console.log(`=== HINT GIVEN ===`);
+            console.log(`Player: ${playerName}`);
+            console.log(`Hint: "${hint.trim()}"`);
+            console.log(`Selected card ID: ${cardId}`);
+            console.log(`Player hand before: ${player.hand.map(c => c.id).join(', ')}`);
+
+            hintGame.hint = hint.trim();
             hintGame.storytellerCard = cardId;
             hintGame.selectedCards = [{ cardId, playerId: player.id }];
             hintGame.phase = 'selectCards';
 
             // Remove card from hand
-            player.hand = player.hand.filter(card => card.id != cardId);
+            const cardIndex = player.hand.findIndex(card => card.id == cardId);
+            if (cardIndex !== -1) {
+              const removedCard = player.hand.splice(cardIndex, 1)[0];
+              console.log(`Removed card: ${removedCard.id} (${removedCard.title})`);
+            } else {
+              console.error(`ERROR: Could not find card ${cardId} in player hand`);
+            }
+
+            console.log(`Player hand after: ${player.hand.map(c => c.id).join(', ')}`);
+            console.log(`Game phase changed to: ${hintGame.phase}`);
 
             res.json({ success: true, game: hintGame });
           } else {
-            res.status(403).json({ error: 'Nicht berechtigt' });
+            res.status(403).json({ error: 'Nicht berechtigt oder nicht der aktuelle Erzähler' });
           }
         } else {
           res.status(404).json({ error: 'Spiel nicht gefunden' });

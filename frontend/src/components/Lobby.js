@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import VolumeControl from './VolumeControl';
 import audioManager from '../utils/AudioManager';
 
 const API_BASE = '/api';
@@ -154,10 +153,6 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart, volu
     setIsInLobby(false);
     setPlayers([]);
     setError('');
-  };
-
-  const handleVolumeChange = (newVolume) => {
-    setVolume(newVolume);
   };
 
   if (!isInLobby) {
@@ -339,8 +334,6 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart, volu
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* VolumeControl positioniert sich selbst */}
-      <VolumeControl volume={volume} onChange={handleVolumeChange} />
 
       {/* Lobby Header */}
       <div style={{

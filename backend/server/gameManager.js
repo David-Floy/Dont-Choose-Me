@@ -258,8 +258,26 @@ class GameManager {
       return;
     }
 
+    console.log(`=== PREPARING NEXT ROUND ${game.round + 1} ===`);
+    console.log(`Current storyteller index: ${game.storytellerIndex}, player: ${game.players[game.storytellerIndex]?.name}`);
+    console.log(`Total players: ${game.players.length}`);
+
     game.round += 1;
+
+    // FIX: Erzähler-Rotation - stelle sicher dass der Index korrekt rotiert
+    const oldStoryteller = game.storytellerIndex;
     game.storytellerIndex = (game.storytellerIndex + 1) % game.players.length;
+
+    console.log(`Storyteller rotation: ${oldStoryteller} -> ${game.storytellerIndex}`);
+    console.log(`Old storyteller: ${game.players[oldStoryteller]?.name}`);
+    console.log(`New storyteller: ${game.players[game.storytellerIndex]?.name}`);
+
+    // Zusätzliche Validierung
+    if (game.storytellerIndex >= game.players.length || game.storytellerIndex < 0) {
+      console.error(`ERROR: Invalid storyteller index ${game.storytellerIndex} for ${game.players.length} players`);
+      game.storytellerIndex = 0; // Fallback zum ersten Spieler
+      console.log(`Fallback: Reset storyteller to index 0 (${game.players[0]?.name})`);
+    }
 
     // Spieler-Hände auffüllen - aber nur bis maximal 6 Karten und keine Duplikate
     console.log(`=== REFILLING HANDS FOR ROUND ${game.round} ===`);
@@ -306,7 +324,9 @@ class GameManager {
     game.votes = [];
     game.phase = 'storytelling';
 
-    console.log(`Next round prepared for game ${gameId}, new storyteller: ${game.players[game.storytellerIndex].name}`);
+    console.log(`=== ROUND ${game.round} PREPARED ===`);
+    console.log(`Current storyteller: ${game.players[game.storytellerIndex]?.name} (index ${game.storytellerIndex})`);
+    console.log(`Game phase: ${game.phase}`);
     console.log(`=== END REFILLING HANDS ===`);
   }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
+import VolumeControl from './components/VolumeControl';
 import audioManager from './utils/AudioManager';
 
 class ErrorBoundary extends React.Component {
@@ -31,13 +32,13 @@ function App() {
   const [gameId, setGameId] = useState('');
   const [playerName, setPlayerName] = useState('');
   const [isInGame, setIsInGame] = useState(false);
-  const [volume, setVolume] = useState(0.7); // Zentraler Volume State
+  const [volume, setVolume] = useState(0.3); // Reduzierte Standard-Lautstärke
 
   // Initialisiere AudioManager beim App-Start
   useEffect(() => {
     audioManager.setVolume(volume);
 
-    // Auto-start Lobby-Musik
+    // Auto-start Lobby-Musik mit reduzierter Lautstärke
     audioManager.playTrack('lobby.mp3', true, 2000);
 
     // Cleanup bei App-Beendigung
@@ -62,9 +63,16 @@ function App() {
     audioManager.playTrack('lobby.mp3', true, 1000);
   };
 
+  const handleVolumeChange = (newVolume) => {
+    setVolume(newVolume);
+  };
+
   return (
     <ErrorBoundary>
-      <div className="App">
+      <div className="App" style={{ position: 'relative' }}>
+        {/* VolumeControl für die Startseite */}
+        {!isInGame && <VolumeControl volume={volume} onChange={handleVolumeChange} />}
+
         <div style={{
           minHeight: '100vh',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -80,7 +88,8 @@ function App() {
               borderRadius: '20px',
               backdropFilter: 'blur(10px)',
               color: 'white',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+              position: 'relative'
             }}>
               <h1 style={{
                 margin: '0 0 15px 0',
@@ -102,6 +111,25 @@ function App() {
               }}>
                 Das kreative Ratespiel für Freunde und Familie
               </p>
+
+              {/* Audio Indicator für Startseite */}
+              {!isInGame && (
+                <div style={{
+                  position: 'absolute',
+                  top: '15px',
+                  right: '15px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'rgba(255,255,255,0.1)',
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  opacity: 0.7
+                }}>
+                  🎵 Willkommensmusik
+                </div>
+              )}
             </div>
 
             {/* Main Content */}
@@ -142,7 +170,10 @@ function App() {
               fontSize: '14px'
             }}>
               <p style={{ margin: 0 }}>
-                🎵 Mit Musik und Lautstärkeregelung • Viel Spaß beim Spielen!
+                💡 Ein Erzähler gibt einen Hinweis zu seiner Karte<br/>
+                🃏 Andere wählen passende Karten aus ihrer Hand<br/>
+                🗳️ Alle raten, welche Karte vom Erzähler stammt<br/>
+                🏆 Erste Person mit 30 Punkten gewinnt!
               </p>
             </div>
           </div>

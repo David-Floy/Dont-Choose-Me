@@ -4,7 +4,7 @@
 class AudioManager {
   constructor() {
     this.currentAudio = null;
-    this.volume = 0.7;
+    this.volume = 0.3; // Reduzierte Standard-Lautstärke
     this.isPlaying = false;
     this.currentTrack = null;
     this.fadeInterval = null;
@@ -220,4 +220,3 @@ class AudioManager {
 // Singleton Instance
 const audioManager = new AudioManager();
 export default audioManager;
-
