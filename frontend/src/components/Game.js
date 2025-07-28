@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Card from './Card';
 // Animationen für Karten
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
@@ -24,6 +24,8 @@ function Game({ playerName, gameId }) {
   const [revealTimer, setRevealTimer] = useState(null);
   const [gameWinner, setGameWinner] = useState(null);
   const [playerId, setPlayerId] = useState(localStorage.getItem('playerId'));
+  const [playedVoteSound, setPlayedVoteSound] = useState(false);
+  const voteAudioRef = useRef(null);
 
   // Polling für Spielstatus
   useEffect(() => {
@@ -122,6 +124,20 @@ function Game({ playerName, gameId }) {
     }
   }, [game, playerName]);
 
+  // Sound-Effekt für Voting initialisieren, wenn noch nicht abgespielt
+  useEffect(() => {
+    if ((phase === 'vote' || phase === 'voteWatch') && !playedVoteSound) {
+      if (voteAudioRef.current) {
+        voteAudioRef.current.play().catch(err => {
+          console.log("Audio konnte nicht abgespielt werden:", err);
+        });
+        setPlayedVoteSound(true);
+      }
+    } else if (phase !== 'vote' && phase !== 'voteWatch') {
+      setPlayedVoteSound(false);
+    }
+  }, [phase, playedVoteSound]);
+
   // === GAME ACTIONS ===
 
   /**
@@ -174,7 +190,27 @@ function Game({ playerName, gameId }) {
    * Behandelt die Stimmabgabe für eine Karte
    */
   const handleVote = async (cardId) => {
+    // Prüfen, ob es sich um die eigene Karte handelt
+    const mySelectedCard = game?.selectedCards?.find(sc => {
+      const player = game.players.find(p => p.id === sc.playerId);
+      return player?.name === playerName;
+    });
+
+    if (mySelectedCard && mySelectedCard.cardId === cardId) {
+      // Eigene Karte angeklickt - nicht erlauben
+      console.log("Du kannst nicht für deine eigene Karte stimmen!");
+      return;
+    }
+
     try {
+      // Sound abspielen beim Voting
+      if (voteAudioRef.current) {
+        voteAudioRef.current.currentTime = 0;
+        voteAudioRef.current.play().catch(err => {
+          console.log("Audio konnte nicht abgespielt werden:", err);
+        });
+      }
+
       await fetch(`${API_BASE}/game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -811,15 +847,17 @@ function Game({ playerName, gameId }) {
           🎯 Wähle die Karte des Erzählers:
         </h4>
 
-        <TransitionGroup style={{
-          display: 'flex',
-          flexWrap: 'wrap',
+        {/* Karten-Grid mit max. 3 Karten pro Reihe */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))',
           gap: '20px',
-          justifyContent: 'center',
           padding: '20px',
           background: 'rgba(255,255,255,0.1)',
           borderRadius: '12px',
-          backdropFilter: 'blur(10px)'
+          backdropFilter: 'blur(10px)',
+          maxWidth: '800px',
+          margin: '0 auto'
         }}>
           {mixedCards.map(({ cardId }) => {
             const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
@@ -835,49 +873,92 @@ function Game({ playerName, gameId }) {
 
             // Prüfe ob das die eigene Karte ist
             const isMyCard = mySelectedCard && mySelectedCard.cardId === cardId;
+            // Prüfe ob für diese Karte bereits abgestimmt wurde
+            const hasVotedForThisCard = game?.votes?.some(v => {
+              const voter = game.players.find(p => p.id === v.playerId);
+              return voter?.name === playerName && v.cardId === cardId;
+            });
 
             return (
-              <CSSTransition key={cardId} timeout={400} classNames="card-anim">
-                <div style={{ position: 'relative' }}>
-                  {/* Label für "Your Card" */}
-                  {isMyCard && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-12px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background: '#28a745',
-                      color: 'white',
-                      padding: '6px 12px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      zIndex: 1,
-                      boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
-                    }}>
-                      🏷️ Your Card
-                    </div>
-                  )}
+              <div key={cardId} style={{ position: 'relative' }}>
+                {/* Label für "Your Card" */}
+                {isMyCard && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '-12px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#28a745',
+                    color: 'white',
+                    padding: '6px 12px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    zIndex: 1,
+                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
+                  }}>
+                    🏷️ Deine Karte
+                  </div>
+                )}
 
-                  <Card
-                    card={card}
-                    onClick={() => handleVote(cardId)}
-                    style={{
-                      opacity: isMyCard ? 0.8 : 1,
-                      border: isMyCard
-                        ? '4px solid #28a745'
+                {hasVotedForThisCard && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-10px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#007bff',
+                    color: 'white',
+                    padding: '4px 10px',
+                    borderRadius: '10px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    zIndex: 1,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                  }}>
+                    ✓ Gewählt
+                  </div>
+                )}
+
+                <Card
+                  card={card}
+                  onClick={() => !isMyCard && handleVote(cardId)}
+                  style={{
+                    opacity: isMyCard ? 0.7 : 1,
+                    border: isMyCard
+                      ? '4px solid #28a745'
+                      : hasVotedForThisCard
+                        ? '4px solid #007bff'
                         : '2px solid rgba(255,255,255,0.3)',
-                      cursor: 'pointer',
-                      borderRadius: '12px',
-                      transition: 'all 0.3s cubic-bezier(.68,-0.55,.27,1.55)',
-                      boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
-                    }}
-                  />
-                </div>
-              </CSSTransition>
+                    cursor: isMyCard ? 'not-allowed' : 'pointer',
+                    borderRadius: '12px',
+                    transition: 'all 0.3s cubic-bezier(.68,-0.55,.27,1.55)',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+                    filter: isMyCard ? 'grayscale(30%)' : 'none'
+                  }}
+                />
+                {isMyCard && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%) rotate(-15deg)',
+                    color: '#dc3545',
+                    background: 'rgba(255,255,255,0.8)',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    fontSize: '16px',
+                    pointerEvents: 'none',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                  }}>
+                    NICHT WÄHLBAR
+                  </div>
+                )}
+              </div>
             );
           })}
-        </TransitionGroup>
+        </div>
 
         {/* Voting-Status */}
         <div style={{
@@ -912,6 +993,12 @@ function Game({ playerName, gameId }) {
             </div>
           )}
         </div>
+
+        {/* Audio Element für den Voting Sound */}
+        <audio ref={voteAudioRef}>
+          <source src="/sounds/vote.mp3" type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
       </div>
     );
   };
@@ -951,15 +1038,17 @@ function Game({ playerName, gameId }) {
           🃏 Die gelegten Karten mit Besitzern:
         </h4>
 
+        {/* Karten-Grid mit max. 3 Karten pro Reihe */}
         <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))',
           gap: '20px',
-          justifyContent: 'center',
           padding: '20px',
           background: 'rgba(255,255,255,0.1)',
           borderRadius: '12px',
-          backdropFilter: 'blur(10px)'
+          backdropFilter: 'blur(10px)',
+          maxWidth: '800px',
+          margin: '0 auto'
         }}>
           {mixedCards.map(({ cardId }) => {
             const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
@@ -1085,6 +1174,12 @@ function Game({ playerName, gameId }) {
             </div>
           )}
         </div>
+
+        {/* Audio Element für den Voting Sound */}
+        <audio ref={voteAudioRef}>
+          <source src="/sounds/vote.mp3" type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
       </div>
     );
   };
@@ -1137,9 +1232,15 @@ function Game({ playerName, gameId }) {
           Hinweis war: <span style={{color:'#007bff', fontWeight: 'bold'}}>{game?.hint}</span>
         </p>
 
-        {/* Karten-Auflösung */}
+        {/* Karten-Auflösung mit Grid-Layout */}
         {revealInfo && revealInfo.length > 0 ? (
-          <TransitionGroup style={{display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', marginBottom: '32px'}}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))',
+            gap: '16px',
+            justifyContent: 'center',
+            marginBottom: '32px'
+          }}>
             {revealInfo.map(info => {
               // Karte suchen
               const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
@@ -1152,50 +1253,48 @@ function Game({ playerName, gameId }) {
                 };
               }
               return (
-                <CSSTransition key={info.cardId} timeout={400} classNames="card-anim">
-                  <div style={{
-                    border: info.isStoryteller ? '4px solid #007bff' : '2px solid #ccc',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    background: info.isStoryteller ? '#e3f2fd' : '#fff',
-                    minWidth: '220px',
-                    textAlign: 'center',
-                    boxShadow: info.isStoryteller ? '0 4px 8px rgba(0,123,255,0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
-                    transition: 'box-shadow 0.3s, border 0.3s'
-                  }}>
-                    <Card card={card} />
-                    <div style={{marginTop: '12px', fontSize: '16px'}}>
-                      <strong>{info.playerName}</strong>
-                      {info.isStoryteller && (
-                        <div style={{
-                          color:'#007bff',
-                          fontWeight: 'bold',
-                          marginTop: '4px',
-                          padding: '4px 8px',
-                          background: '#fff',
-                          borderRadius: '8px',
-                          border: '1px solid #007bff'
-                        }}>
-                          🎭 Erzähler
-                        </div>
-                      )}
-                    </div>
-                    <div style={{
-                      marginTop: '8px',
-                      padding: '4px 8px',
-                      background: info.votes > 0 ? '#28a745' : '#6c757d',
-                      color: 'white',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
-                    }}>
-                      {info.votes} Stimme{info.votes !== 1 ? 'n' : ''}
-                    </div>
+                <div key={info.cardId} style={{
+                  border: info.isStoryteller ? '4px solid #007bff' : '2px solid #ccc',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: info.isStoryteller ? '#e3f2fd' : '#fff',
+                  minWidth: '180px',
+                  textAlign: 'center',
+                  boxShadow: info.isStoryteller ? '0 4px 8px rgba(0,123,255,0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
+                  transition: 'box-shadow 0.3s, border 0.3s'
+                }}>
+                  <Card card={card} />
+                  <div style={{marginTop: '12px', fontSize: '16px'}}>
+                    <strong>{info.playerName}</strong>
+                    {info.isStoryteller && (
+                      <div style={{
+                        color:'#007bff',
+                        fontWeight: 'bold',
+                        marginTop: '4px',
+                        padding: '4px 8px',
+                        background: '#fff',
+                        borderRadius: '8px',
+                        border: '1px solid #007bff'
+                      }}>
+                        🎭 Erzähler
+                      </div>
+                    )}
                   </div>
-                </CSSTransition>
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '4px 8px',
+                    background: info.votes > 0 ? '#28a745' : '#6c757d',
+                    color: 'white',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}>
+                    {info.votes} Stimme{info.votes !== 1 ? 'n' : ''}
+                  </div>
+                </div>
               );
             })}
-          </TransitionGroup>
+          </div>
         ) : (
           <div style={{textAlign: 'center', marginBottom: '32px'}}>
             <p>Lade Kartendaten...</p>
