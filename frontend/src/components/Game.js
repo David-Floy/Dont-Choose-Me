@@ -88,8 +88,10 @@ function Game({ playerName, gameId }) {
         // Storyteller gets special voting phase for observation
         if (storyteller?.name === playerName) {
           newPhase = 'voteWatch'; // New phase for storyteller
+        } else if (hasVoted) {
+          newPhase = 'waitingAfterVote'; // New phase for players who voted
         } else {
-          newPhase = hasVoted ? 'waiting' : 'vote';
+          newPhase = 'vote';
         }
       } else if (game.phase === 'reveal') {
         newPhase = 'reveal';
@@ -329,15 +331,30 @@ function Game({ playerName, gameId }) {
       <div>
         {game?.hint && game.selectedCards?.length < game.players?.length ? (
           <div>
-            <p>Hinweis: <strong>{game.hint}</strong></p>
-            <p>Warte, bis alle Spieler ihre Karten ausgewählt haben...</p>
-            <p>Fortschritt: {game.selectedCards.length} / {game.players.length} Karten gewählt</p>
+            <div style={{
+              background: 'rgba(255,255,255,0.15)',
+              padding: '15px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              backdropFilter: 'blur(10px)',
+              textAlign: 'center'
+            }}>
+              <p style={{ fontSize: '18px', margin: '0 0 10px 0' }}>
+                Hinweis: <span style={{color:'#ffd700', fontWeight: 'bold', fontSize: '20px'}}>{game.hint}</span>
+              </p>
+              <p style={{ fontSize: '14px', opacity: 0.9, margin: 0 }}>
+                Warte, bis alle Spieler ihre Karten ausgewählt haben...
+              </p>
+              <p style={{ fontSize: '14px', fontWeight: 'bold', margin: '5px 0 0 0' }}>
+                Fortschritt: {game.selectedCards.length} / {game.players.length} Karten gewählt
+              </p>
+            </div>
 
             {/* Storyteller sees already placed cards */}
             {isStoryteller && game.selectedCards.length > 1 && (
-              <div style={{ marginTop: '20px' }}>
-                <h4>Von anderen Spielern gelegte Karten:</h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ textAlign: 'center', marginBottom: '15px' }}>Von anderen Spielern gelegte Karten:</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center' }}>
                   {game.selectedCards.slice(1).map((selectedCard, index) => {
                     const player = game.players.find(p => p.id === selectedCard.playerId);
                     const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
@@ -370,6 +387,38 @@ function Game({ playerName, gameId }) {
                 </div>
               </div>
             )}
+
+            {/* Show player's hand during waiting */}
+            {hand.length > 0 && (
+              <div style={{ marginTop: '20px' }}>
+                <h4 style={{ textAlign: 'center', marginBottom: '15px', color: 'white' }}>
+                  📋 Deine verbleibenden Karten:
+                </h4>
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  justifyContent: 'center',
+                  padding: '15px',
+                  background: 'rgba(255,255,255,0.1)',
+                  borderRadius: '12px',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  {hand.map(card => (
+                    <div key={card.id} style={{ opacity: 0.8 }}>
+                      <Card
+                        card={card}
+                        style={{
+                          transform: 'scale(0.9)',
+                          border: '2px solid rgba(255,255,255,0.3)',
+                          borderRadius: '8px'
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : game?.phase === 'voting' && isStoryteller ? (
           <div>
@@ -377,7 +426,43 @@ function Game({ playerName, gameId }) {
             <p>Du kannst nicht abstimmen, aber beobachtest das Geschehen.</p>
           </div>
         ) : (
-          <div>Bitte warten...</div>
+          <div>
+            <p style={{ textAlign: 'center', fontSize: '18px', marginBottom: '20px' }}>
+              Bitte warten...
+            </p>
+
+            {/* Show player's hand during initial waiting */}
+            {hand.length > 0 && (
+              <div>
+                <h4 style={{ textAlign: 'center', marginBottom: '15px', color: 'white' }}>
+                  📋 Deine Karten:
+                </h4>
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  justifyContent: 'center',
+                  padding: '15px',
+                  background: 'rgba(255,255,255,0.1)',
+                  borderRadius: '12px',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  {hand.map(card => (
+                    <div key={card.id} style={{ opacity: 0.8 }}>
+                      <Card
+                        card={card}
+                        style={{
+                          transform: 'scale(0.9)',
+                          border: '2px solid rgba(255,255,255,0.3)',
+                          borderRadius: '8px'
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     );
@@ -929,6 +1014,210 @@ function Game({ playerName, gameId }) {
   };
 
   /**
+   * Renders the waiting phase after voting
+   */
+  const renderWaitingAfterVotePhase = () => {
+    return (
+      <div style={{
+        padding: '20px',
+        background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+        borderRadius: '16px',
+        color: 'white',
+        textAlign: 'center'
+      }}>
+        <h3 style={{ margin: '0 0 15px 0', fontSize: '24px', textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+          ✅ Abstimmung abgeschlossen!
+        </h3>
+
+        <div style={{
+          background: 'rgba(255,255,255,0.15)',
+          padding: '15px',
+          borderRadius: '12px',
+          marginBottom: '20px',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <p style={{ fontSize: '18px', margin: '0 0 10px 0' }}>
+            Hinweis war: <span style={{color:'#ffd700', fontWeight: 'bold', fontSize: '20px'}}>{game?.hint}</span>
+          </p>
+          <p style={{ fontSize: '16px', margin: '0', fontWeight: 'bold' }}>
+            Warte, bis alle anderen Spieler abstimmen...
+          </p>
+        </div>
+
+        {/* Show the voting cards again */}
+        <h4 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>
+          🃏 Die zur Auswahl stehenden Karten:
+        </h4>
+
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '20px',
+          justifyContent: 'center',
+          padding: '20px',
+          background: 'rgba(255,255,255,0.1)',
+          borderRadius: '12px',
+          backdropFilter: 'blur(10px)'
+        }}>
+          {mixedCards.map(({ cardId }) => {
+            const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
+            let card = combinedCards.find(c => c.id === cardId);
+
+            if (!card) {
+              card = {
+                id: cardId,
+                title: `Karte ${cardId}`,
+                image: `https://placehold.co/300x200?text=Karte+${cardId}`
+              };
+            }
+
+            // Check if this is the player's own card
+            const myPlayer = game?.players?.find(p => p.name === playerName);
+            const mySelectedCard = game?.selectedCards?.find(sc => {
+              const player = game.players.find(p => p.id === sc.playerId);
+              return player?.name === playerName;
+            });
+            const isMyCard = mySelectedCard && mySelectedCard.cardId === cardId;
+
+            // Check if player voted for this card
+            const myVote = game?.votes?.find(v => {
+              const voter = game.players.find(p => p.id === v.playerId);
+              return voter?.name === playerName;
+            });
+            const votedForThisCard = myVote && myVote.cardId === cardId;
+
+            return (
+              <div key={cardId} style={{ position: 'relative' }}>
+                {/* Label for "Your Card" */}
+                {isMyCard && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '-12px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#28a745',
+                    color: 'white',
+                    padding: '6px 12px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    zIndex: 1,
+                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
+                  }}>
+                    🏷️ Your Card
+                  </div>
+                )}
+
+                {/* Label for voted card */}
+                {votedForThisCard && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '-12px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#ffd700',
+                    color: '#333',
+                    padding: '6px 12px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    zIndex: 1,
+                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
+                  }}>
+                    🗳️ Deine Stimme
+                  </div>
+                )}
+
+                <Card
+                  card={card}
+                  style={{
+                    opacity: 0.8,
+                    border: isMyCard
+                      ? '4px solid #28a745'
+                      : votedForThisCard
+                        ? '4px solid #ffd700'
+                        : '2px solid rgba(255,255,255,0.3)',
+                    cursor: 'default',
+                    borderRadius: '12px',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Voting status */}
+        <div style={{
+          marginTop: '25px',
+          background: 'rgba(255,255,255,0.15)',
+          padding: '15px',
+          borderRadius: '12px',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <p style={{ fontSize: '16px', margin: '0 0 10px 0', fontWeight: 'bold' }}>
+            📊 Abstimmungen: {game?.votes?.length || 0} / {(game?.players?.length || 1) - 1}
+          </p>
+          {game?.votes?.length > 0 && (
+            <div>
+              <p style={{ fontSize: '14px', margin: '0 0 8px 0', opacity: 0.9 }}>Bereits abgestimmt:</p>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                {game.votes.map((vote, index) => {
+                  const voter = game.players.find(p => p.id === vote.playerId);
+                  return (
+                    <span key={index} style={{
+                      background: 'rgba(255,255,255,0.2)',
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}>
+                      ✅ {voter ? voter.name : 'Unbekannt'}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Show remaining hand */}
+        {hand.length > 0 && (
+          <div style={{ marginTop: '25px' }}>
+            <h4 style={{ textAlign: 'center', marginBottom: '15px' }}>
+              📋 Deine verbleibenden Karten:
+            </h4>
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              justifyContent: 'center',
+              padding: '15px',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              backdropFilter: 'blur(10px)'
+            }}>
+              {hand.map(card => (
+                <div key={card.id} style={{ opacity: 0.7 }}>
+                  <Card
+                    card={card}
+                    style={{
+                      transform: 'scale(0.8)',
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      borderRadius: '8px'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /**
    * Renders the permanent scoreboard
    */
   const renderScoreboard = () => (
@@ -1353,6 +1642,7 @@ function Game({ playerName, gameId }) {
           {phase === 'chooseCard' && renderChooseCardPhase()}
           {phase === 'vote' && renderVotePhase()}
           {phase === 'voteWatch' && renderVoteWatchPhase()}
+          {phase === 'waitingAfterVote' && renderWaitingAfterVotePhase()}
           {phase === 'reveal' && renderRevealPhase()}
           {phase === 'results' && renderResultsPhase()}
           {phase === 'gameEnd' && renderGameEndPhase()}

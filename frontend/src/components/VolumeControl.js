@@ -10,7 +10,7 @@ function VolumeControl({ volume = 0.7, onChange }) {
 
   // Emoji basierend auf Lautstärke auswählen
   const getVolumeEmoji = () => {
-    if (volume <= 0.1) return '🔇';
+    if (volume <= 0.01) return '🔇';
     if (volume <= 0.4) return '🔈';
     if (volume <= 0.7) return '🔉';
     return '🔊';
