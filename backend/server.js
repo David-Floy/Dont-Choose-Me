@@ -13,9 +13,16 @@ const GameManager = require('./server/gameManager');
 // === SERVER SETUP ===
 const app = express();
 const server = http.createServer(app);
+
+// Produktions- vs Entwicklungsumgebung
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = isProduction
+  ? ['https://dont-choose-me.vercel.app', 'https://dein-domain.com'] // Füge deine Domain hinzu
+  : ['http://localhost:3000', 'https://dont-choose-me.vercel.app'];
+
 const io = new Server(server, {
   cors: {
-    origin: 'https://dont-choose-me.vercel.app',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
   },
 });
@@ -32,14 +39,23 @@ const gameManager = new GameManager();
  * Lädt die Karten aus der JSON-Datei
  */
 function loadCards() {
-  fs.readFile(path.join(__dirname, 'cards.json'), 'utf8', (err, data) => {
-    if (!err) {
+  const cardsPath = path.join(__dirname, 'cards.json');
+  if (fs.existsSync(cardsPath)) {
+    try {
+      const data = fs.readFileSync(cardsPath, 'utf8');
       cards = JSON.parse(data);
       console.log(`${cards.length} Karten geladen`);
-    } else {
-      console.error('Fehler beim Laden der Karten:', err);
+    } catch (error) {
+      console.error('Fehler beim Laden der Karten:', error);
+      cards = [];
     }
-  });
+  } else {
+    console.warn('cards.json nicht gefunden - erstelle Beispielkarten');
+    cards = [
+      { id: 1, title: 'Beispielkarte 1', image: '/images/example1.jpg' },
+      { id: 2, title: 'Beispielkarte 2', image: '/images/example2.jpg' }
+    ];
+  }
 }
 
 // === EXPRESS ROUTES ===
@@ -52,12 +68,39 @@ app.get('/api/cards', (req, res) => {
 // Statische Dateien für Bilder servieren
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
-// Statische Dateien servieren
-app.use(express.static(path.join(__dirname, 'build')));
+// Statische Dateien servieren - nur in Produktion
+if (isProduction) {
+  const buildPath = path.join(__dirname, 'build');
+  if (fs.existsSync(buildPath)) {
+    app.use(express.static(buildPath));
 
-// Fallback-Route für SPA
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+    // Fallback-Route für SPA
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(buildPath, 'index.html'));
+    });
+  } else {
+    console.error('Build-Ordner nicht gefunden! Führe "npm run build" aus.');
+  }
+} else {
+  // Entwicklungsumgebung - zeige Infoseite
+  app.get('/', (req, res) => {
+    res.send(`
+      <h1>PicMe Server läuft!</h1>
+      <p>Port: ${PORT}</p>
+      <p>Entwicklungsmodus - Frontend läuft separat auf Port 3000</p>
+      <p>Karten geladen: ${cards.length}</p>
+    `);
+  });
+}
+
+// Health-Check Route für Deployment
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    cardsLoaded: cards.length,
+    activeGames: Object.keys(gameManager.games || {}).length
+  });
 });
 
 // === SOCKET EVENT HANDLERS ===
@@ -700,7 +743,12 @@ function calculatePoints(game) {
 
 // === SERVER START ===
 loadCards();
-server.listen(PORT, () => {
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`PicMe Server läuft auf Port ${PORT}`);
-  console.log(`Server erreichbar unter: https://dont-choose-me.vercel.app`);
+  console.log(`Umgebung: ${isProduction ? 'Produktion' : 'Entwicklung'}`);
+  console.log(`Karten geladen: ${cards.length}`);
+  if (isProduction) {
+    console.log(`Server erreichbar unter: http://your-server-ip:${PORT}`);
+  }
 });
