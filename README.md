@@ -1,10 +1,10 @@
-# PicMe - Don't Choose Me Card Game
+# Don't Choose Me - Card Game
 
 A digital implementation of the popular card game "Dixit" where players use their imagination to give creative hints about picture cards.
 
 ## 🎮 Game Overview
 
-PicMe is a multiplayer storytelling game where:
+Don't Choose Me is a multiplayer storytelling game where:
 - One player acts as the storyteller and gives a creative hint about their chosen card
 - Other players select cards from their hand that best match the hint
 - All selected cards are shuffled and presented for voting
@@ -359,7 +359,7 @@ This project is **open source** and released under the MIT License. You are free
 - Contribute to the project development
 
 ### Non-Commercial Use
-**Important**: This is **NOT a commercial product**. PicMe is developed as:
+**Important**: This is **NOT a commercial product**. Don't Choose Me is developed as:
 - An educational project to learn web development
 - A personal implementation for private use with friends and family
 - A demonstration of game development techniques
@@ -374,7 +374,7 @@ This project is **open source** and released under the MIT License. You are free
 ### Trademark Notice
 - "Dixit" is a trademark of Libellud
 - This project is not affiliated with or endorsed by Libellud
-- PicMe is an independent implementation inspired by similar storytelling card games
+- Don't Choose Me is an independent implementation inspired by similar storytelling card games
 
 ### Liability
 - This software is provided "as is" without warranty of any kind
