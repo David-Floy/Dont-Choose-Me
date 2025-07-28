@@ -30,7 +30,7 @@ function Game({ playerName, gameId }) {
         const response = await fetch(`${API_BASE}/game`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ gameId, action: 'getState' })
+          body: JSON.stringify({ gameId, action: 'getState', playerName })
         });
         if (response.ok) {
           const data = await response.json();
@@ -127,13 +127,35 @@ function Game({ playerName, gameId }) {
       await fetch(`${API_BASE}/game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, action: 'giveHint', cardId: selectedCard, hint: hint.trim(), playerId })
+        body: JSON.stringify({
+          gameId,
+          action: 'giveHint',
+          cardId: selectedCard,
+          hint: hint.trim(),
+          playerName
+        })
       });
       setSelectedCard(null);
       setHint('');
     } catch (error) {
       console.error('Error giving hint:', error);
     }
+  };
+
+  /**
+   * Behandelt die Kartenauswahl
+   */
+  const handleChooseCard = async (cardId) => {
+    try {
+      await fetch(`${API_BASE}/game`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId,
+          action: 'chooseCard',
+          cardId,
+          playerName
+        })
       });
       setSelectedCard(cardId);
     } catch (error) {
@@ -149,7 +171,12 @@ function Game({ playerName, gameId }) {
       await fetch(`${API_BASE}/game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, action: 'vote', cardId, playerId })
+        body: JSON.stringify({
+          gameId,
+          action: 'vote',
+          cardId,
+          playerName
+        })
       });
     } catch (error) {
       console.error('Error voting:', error);
@@ -164,7 +191,11 @@ function Game({ playerName, gameId }) {
       await fetch(`${API_BASE}/game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, action: 'nextRound' })
+        body: JSON.stringify({
+          gameId,
+          action: 'nextRound',
+          playerName
+        })
       });
     } catch (error) {
       console.error('Error continuing to next round:', error);
@@ -179,7 +210,11 @@ function Game({ playerName, gameId }) {
       await fetch(`${API_BASE}/game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, action: 'restart' })
+        body: JSON.stringify({
+          gameId,
+          action: 'restart',
+          playerName
+        })
       });
       setGameWinner(null);
       setRevealInfo(null);
@@ -489,13 +524,22 @@ function Game({ playerName, gameId }) {
             ❌ Keine Karten in der Hand gefunden!
           </p>
           <button
-            onClick={() => {
-              // Triggere neuen API-Aufruf statt Socket.io
-              fetch(`${API_BASE}/game`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ gameId, action: 'getState' })
-              });
+            onClick={async () => {
+              // Triggere neuen API-Aufruf
+              try {
+                const response = await fetch(`${API_BASE}/game`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ gameId, action: 'getState', playerName })
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setGame(data.game);
+                  updateHand(data.game);
+                }
+              } catch (error) {
+                console.error('Error refreshing game state:', error);
+              }
             }}
             style={{
               padding: '10px 20px',
