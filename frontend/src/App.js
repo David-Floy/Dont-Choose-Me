@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
+import audioManager from './utils/AudioManager';
+import './App.css';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -29,95 +31,121 @@ class ErrorBoundary extends React.Component {
 function App() {
   const [gameId, setGameId] = useState('');
   const [playerName, setPlayerName] = useState('');
-  const [gameStarted, setGameStarted] = useState(false);
+  const [isInGame, setIsInGame] = useState(false);
+  const [volume, setVolume] = useState(0.7); // Zentraler Volume State
 
-  // Funktion um zurück zur Lobby zu gehen
-  const handleBackToLobby = () => {
-    setGameStarted(false);
+  // Initialisiere AudioManager beim App-Start
+  useEffect(() => {
+    audioManager.setVolume(volume);
+
+    // Auto-start Lobby-Musik
+    audioManager.playTrack('lobby.mp3', true, 2000);
+
+    // Cleanup bei App-Beendigung
+    return () => {
+      audioManager.stopTrack(500);
+    };
+  }, []);
+
+  // Volume änderungen an AudioManager weiterleiten
+  useEffect(() => {
+    audioManager.setVolume(volume);
+  }, [volume]);
+
+  const handleGameStart = () => {
+    setIsInGame(true);
   };
 
-  if (gameStarted) {
-    return <Game
-      playerName={playerName}
-      gameId={gameId}
-      onBackToLobby={handleBackToLobby}
-    />;
-  }
+  const handleLeaveGame = () => {
+    setIsInGame(false);
+    setGameId('');
+    // Wechsel zurück zur Lobby-Musik
+    audioManager.playTrack('lobby.mp3', true, 1000);
+  };
 
   return (
     <ErrorBoundary>
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
+      <div className="App">
         <div style={{
-          background: 'rgba(255,255,255,0.1)',
-          borderRadius: '24px',
-          padding: '40px',
-          backdropFilter: 'blur(20px)',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          maxWidth: '600px',
-          width: '100%'
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          padding: '20px'
         }}>
-          {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            {/* App Header */}
             <div style={{
-              fontSize: '72px',
-              marginBottom: '16px',
-              filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
-            }}>
-              🎨
-            </div>
-            <h1 style={{
+              textAlign: 'center',
+              marginBottom: '40px',
+              background: 'rgba(255,255,255,0.1)',
+              padding: '30px',
+              borderRadius: '20px',
+              backdropFilter: 'blur(10px)',
               color: 'white',
-              fontSize: '48px',
-              margin: '0 0 16px 0',
-              textShadow: '2px 2px 8px rgba(0,0,0,0.3)',
-              fontWeight: 'bold'
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
             }}>
-              Don't Choose Me
-            </h1>
-            <p style={{
-              color: 'rgba(255,255,255,0.9)',
-              fontSize: '18px',
-              margin: 0,
-              lineHeight: '1.6'
+              <h1 style={{
+                margin: '0 0 15px 0',
+                fontSize: '42px',
+                fontWeight: 'bold',
+                textShadow: '3px 3px 6px rgba(0,0,0,0.3)',
+                background: 'linear-gradient(45deg, #ffd700, #ffed4e)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                🎨 Don't Choose Me
+              </h1>
+              <p style={{
+                margin: 0,
+                fontSize: '18px',
+                opacity: 0.9,
+                fontWeight: '300'
+              }}>
+                Das kreative Ratespiel für Freunde und Familie
+              </p>
+            </div>
+
+            {/* Main Content */}
+            <div style={{
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '20px',
+              padding: '30px',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)'
             }}>
-              Das ultimative Kartenspiel der Kreativität und Täuschung
-            </p>
-          </div>
+              {isInGame ? (
+                <Game
+                  gameId={gameId}
+                  playerName={playerName}
+                  onLeaveGame={handleLeaveGame}
+                  volume={volume}
+                  setVolume={setVolume}
+                />
+              ) : (
+                <Lobby
+                  gameId={gameId}
+                  setGameId={setGameId}
+                  playerName={playerName}
+                  setPlayerName={setPlayerName}
+                  onGameStart={handleGameStart}
+                  volume={volume}
+                  setVolume={setVolume}
+                />
+              )}
+            </div>
 
-          <Lobby
-            gameId={gameId}
-            setGameId={setGameId}
-            playerName={playerName}
-            setPlayerName={setPlayerName}
-            onGameStart={() => setGameStarted(true)}
-          />
-
-          {/* Footer */}
-          <div style={{
-            textAlign: 'center',
-            marginTop: '40px',
-            padding: '20px 0',
-            borderTop: '1px solid rgba(255,255,255,0.2)',
-            color: 'rgba(255,255,255,0.7)',
-            fontSize: '14px'
-          }}>
-            <p style={{ margin: '0 0 8px 0' }}>
-              Wie wird gespielt?
-            </p>
-            <p style={{ margin: 0, lineHeight: '1.4' }}>
-              🎭 Ein Erzähler gibt einen Hinweis zu seiner Karte<br/>
-              🃏 Andere wählen passende Karten aus ihrer Hand<br/>
-              🗳️ Alle raten, welche Karte vom Erzähler stammt<br/>
-              🏆 Erste Person mit 30 Punkten gewinnt!
-            </p>
+            {/* Footer */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: '30px',
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: '14px'
+            }}>
+              <p style={{ margin: 0 }}>
+                🎵 Mit Musik und Lautstärkeregelung • Viel Spaß beim Spielen!
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -1,11 +1,23 @@
 import React, { useEffect, useState } from 'react';
+import VolumeControl from './VolumeControl';
+import audioManager from '../utils/AudioManager';
 
 const API_BASE = '/api';
 
-function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
+function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart, volume, setVolume }) {
   const [players, setPlayers] = useState([]);
   const [isInLobby, setIsInLobby] = useState(false);
   const [error, setError] = useState('');
+
+  // Starte Lobby-Musik wenn Komponente gemountet wird
+  useEffect(() => {
+    audioManager.playTrack('lobby.mp3', true, 1500);
+
+    return () => {
+      // Cleanup beim Verlassen der Komponente
+      audioManager.stopTrack(1000);
+    };
+  }, []);
 
   // Polling for lobby updates
   useEffect(() => {
@@ -144,6 +156,10 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
     setError('');
   };
 
+  const handleVolumeChange = (newVolume) => {
+    setVolume(newVolume);
+  };
+
   if (!isInLobby) {
     return (
       <div>
@@ -187,6 +203,7 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
               onKeyPress={(e) => e.key === 'Enter' && handleJoinLobby()}
             />
           </div>
+
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{
@@ -321,7 +338,10 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   }
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      {/* VolumeControl positioniert sich selbst */}
+      <VolumeControl volume={volume} onChange={handleVolumeChange} />
+
       {/* Lobby Header */}
       <div style={{
         background: 'rgba(255,255,255,0.1)',

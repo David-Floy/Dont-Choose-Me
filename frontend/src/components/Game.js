@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Card from './Card';
+import VolumeControl from './VolumeControl';
+import audioManager from '../utils/AudioManager';
 
 const API_BASE = '/api';
 
@@ -7,7 +9,7 @@ const API_BASE = '/api';
  * Main game component for the PicMe game
  * @param {string} props.gameId - ID of the game room
  */
-function Game({ playerName, gameId }) {
+function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
   // === STATE MANAGEMENT ===
   const [game, setGame] = useState(null);
   const [hint, setHint] = useState('');
@@ -121,6 +123,24 @@ function Game({ playerName, gameId }) {
       }
     }
   }, [game, playerName]);
+
+  // Musik-Management basierend auf Spielphase
+  useEffect(() => {
+    if (game && game.phase) {
+      if (game.phase === 'voting') {
+        // Wechsel zu Voting-Musik
+        audioManager.playTrack('vote.mp3', true, 1000);
+      } else {
+        // Verwende Lobby-Musik für alle anderen Phasen
+        audioManager.playTrack('lobby.mp3', true, 1000);
+      }
+    }
+
+    return () => {
+      // Cleanup beim Verlassen
+      audioManager.stopTrack(1000);
+    };
+  }, [game?.phase]);
 
   // === GAME ACTIONS ===
 
@@ -1604,12 +1624,20 @@ function Game({ playerName, gameId }) {
     </div>
   );
 
+  const handleVolumeChange = (newVolume) => {
+    setVolume(newVolume);
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '20px'
+      padding: '20px',
+      position: 'relative'
     }}>
+      {/* VolumeControl positioniert sich selbst */}
+      <VolumeControl volume={volume} onChange={handleVolumeChange} />
+
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <div style={{
           textAlign: 'center',
@@ -1618,7 +1646,8 @@ function Game({ playerName, gameId }) {
           padding: '20px',
           borderRadius: '16px',
           backdropFilter: 'blur(10px)',
-          color: 'white'
+          color: 'white',
+          position: 'relative'
         }}>
           <h1 style={{
             margin: '0 0 10px 0',
@@ -1631,6 +1660,23 @@ function Game({ playerName, gameId }) {
             Aktueller Spieler: <strong>{playerName}</strong> |
             Erzähler: <strong>{game?.players?.[game?.storytellerIndex]?.name}</strong>
           </p>
+
+          {/* Audio Indicator */}
+          <div style={{
+            position: 'absolute',
+            top: '10px',
+            right: '15px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'rgba(255,255,255,0.1)',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            fontSize: '12px',
+            opacity: 0.7
+          }}>
+            🎵 {game?.phase === 'voting' ? 'Voting Music' : 'Lobby Music'}
+          </div>
         </div>
 
         {/* Permanent scoreboard */}
