@@ -5,8 +5,6 @@ const API_BASE = '/api';
 
 /**
  * Haupt-Spielkomponente für das PicMe-Spiel
- * @param {Object} props - React Props
- * @param {string} props.playerName - Name des aktuellen Spielers
  * @param {string} props.gameId - ID des Spielraums
  */
 function Game({ playerName, gameId }) {
@@ -136,17 +134,6 @@ function Game({ playerName, gameId }) {
     } catch (error) {
       console.error('Error giving hint:', error);
     }
-  };
-
-  /**
-   * Behandelt die Kartenauswahl durch Nicht-Erzähler
-   */
-  const handleChooseCard = async (cardId) => {
-    try {
-      await fetch(`${API_BASE}/game`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, action: 'chooseCard', cardId, playerId })
       });
       setSelectedCard(cardId);
     } catch (error) {
