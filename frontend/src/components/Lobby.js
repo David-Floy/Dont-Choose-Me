@@ -1,53 +1,42 @@
 import React, { useEffect, useState } from 'react';
-import io from 'socket.io-client';
 
-const socket = io('https://dont-choose-me.vercel.app/', { autoConnect: true });
+const API_BASE = '/api';
 
 function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   const [players, setPlayers] = useState([]);
   const [isInLobby, setIsInLobby] = useState(false);
   const [error, setError] = useState('');
 
+  // Polling für Lobby-Updates
   useEffect(() => {
-    const handleLobbyUpdate = (playerList) => {
-      setPlayers(playerList);
-    };
+    if (!isInLobby || !gameId) return;
 
-    const handleGameStarted = () => {
-      onGameStart();
-    };
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`${API_BASE}/game`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gameId, action: 'getState', playerName })
+        });
 
-    const handleJoinError = ({ error }) => {
-      setError(error);
-      setIsInLobby(false);
-    };
+        if (response.ok) {
+          const data = await response.json();
+          setPlayers(data.game.players || []);
 
-    const handleJoinSuccess = ({ gameId: validatedGameId, playerName: validatedPlayerName }) => {
-      setGameId(validatedGameId);
-      setPlayerName(validatedPlayerName);
-      setError('');
-    };
+          // Prüfe ob Spiel gestartet wurde
+          if (data.game.state === 'playing') {
+            onGameStart();
+          }
+        }
+      } catch (error) {
+        console.error('Error polling lobby:', error);
+      }
+    }, 2000);
 
-    const handleStartGameError = ({ error }) => {
-      setError(error);
-    };
+    return () => clearInterval(interval);
+  }, [isInLobby, gameId, playerName, onGameStart]);
 
-    socket.on('lobbyUpdate', handleLobbyUpdate);
-    socket.on('gameStarted', handleGameStarted);
-    socket.on('joinError', handleJoinError);
-    socket.on('joinSuccess', handleJoinSuccess);
-    socket.on('startGameError', handleStartGameError);
-
-    return () => {
-      socket.off('lobbyUpdate', handleLobbyUpdate);
-      socket.off('gameStarted', handleGameStarted);
-      socket.off('joinError', handleJoinError);
-      socket.off('joinSuccess', handleJoinSuccess);
-      socket.off('startGameError', handleStartGameError);
-    };
-  }, [onGameStart]);
-
-  const handleJoinLobby = () => {
+  const handleJoinLobby = async () => {
     // Client-seitige Vorvalidierung (für bessere UX)
     if (!playerName.trim()) {
       setError('Bitte gib einen Spielernamen ein!');
@@ -91,11 +80,34 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
     }
 
     setError('');
-    socket.emit('joinLobby', { playerName: playerName.trim(), gameId: gameId.trim() });
-    setIsInLobby(true);
+
+    try {
+      const response = await fetch(`${API_BASE}/game`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gameId: gameId.trim(),
+          action: 'joinLobby',
+          playerName: playerName.trim()
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPlayers(data.game.players || []);
+        setIsInLobby(true);
+        setError('');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Fehler beim Beitreten');
+      }
+    } catch (error) {
+      setError('Verbindungsfehler zum Server');
+      console.error('Join error:', error);
+    }
   };
 
-  const handleStartGame = () => {
+  const handleStartGame = async () => {
     // Client-seitige Vorvalidierung
     if (players.length < 3) {
       setError('Mindestens 3 Spieler werden benötigt!');
@@ -103,16 +115,33 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
     }
 
     setError('');
-    socket.emit('startGame', gameId);
+
+    try {
+      const response = await fetch(`${API_BASE}/game`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, action: 'startGame', playerName })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.game.state === 'playing') {
+          onGameStart();
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Fehler beim Starten');
+      }
+    } catch (error) {
+      setError('Verbindungsfehler zum Server');
+      console.error('Start game error:', error);
+    }
   };
 
   const handleLeaveLobby = () => {
     setIsInLobby(false);
     setPlayers([]);
     setError('');
-
-    // Sende disconnect event und verlasse den Socket-Raum
-    socket.emit('leaveLobby', { gameId, playerName });
   };
 
   if (!isInLobby) {
