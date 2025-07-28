@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Card from './Card';
+// Animationen für Karten
+import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
 const API_BASE = '/api';
 
@@ -320,6 +322,155 @@ function Game({ playerName, gameId }) {
   // === RENDER HELPERS ===
 
   /**
+   * Rendert das Scoreboard mit den Punkten aller Spieler
+   */
+  const renderScoreboard = () => {
+    if (!game.players || game.players.length === 0) return null;
+
+    // Sortiere Spieler nach Punkten
+    const sortedPlayers = [...game.players].sort((a, b) => b.points - a.points);
+
+    return (
+      <div style={{
+        background: 'rgba(255,255,255,0.15)',
+        borderRadius: '12px',
+        padding: '15px',
+        marginBottom: '20px',
+        backdropFilter: 'blur(5px)'
+      }}>
+        <h3 style={{
+          fontSize: '18px',
+          marginTop: 0,
+          marginBottom: '10px',
+          color: 'white',
+          textAlign: 'center'
+        }}>
+          📊 Punktestand
+        </h3>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '12px',
+          flexWrap: 'wrap'
+        }}>
+          {sortedPlayers.map((player, index) => {
+            const isCurrentPlayer = player.name === playerName;
+            const isStoryteller = game.storytellerIndex !== undefined &&
+                                  game.players[game.storytellerIndex]?.name === player.name;
+
+            return (
+              <div key={player.id || index} style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                background: isCurrentPlayer ? 'rgba(40,167,69,0.8)' : 'rgba(255,255,255,0.1)',
+                color: 'white',
+                fontWeight: 'bold',
+                border: isStoryteller ? '2px solid #ffd700' : 'none',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                minWidth: '120px',
+                textAlign: 'center',
+                position: 'relative'
+              }}>
+                {isStoryteller && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-10px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#ffd700',
+                    color: '#333',
+                    borderRadius: '4px',
+                    padding: '2px 6px',
+                    fontSize: '10px',
+                    fontWeight: 'bold'
+                  }}>
+                    Erzähler
+                  </span>
+                )}
+                <div style={{ fontSize: '14px' }}>{player.name}</div>
+                <div style={{ fontSize: '18px' }}>{player.points || 0} Pkt.</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Rendert die Ergebnisphase nach einer Runde
+   */
+  const renderResultsPhase = () => {
+    return (
+      <div className="fade-in" style={{ textAlign: 'center', padding: '20px' }}>
+        <h3>Runde beendet!</h3>
+        <p>Die Punkte wurden verteilt. Bereit für die nächste Runde?</p>
+
+        {/* Punkteverteilung anzeigen */}
+        <div style={{
+          background: '#f8f9fa',
+          border: '2px solid #28a745',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '24px'
+        }}>
+          <h4 style={{color: '#28a745', textAlign: 'center', marginBottom: '16px'}}>
+            💰 Punkte dieser Runde
+          </h4>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            {game.players.map(player => {
+              const previousPoints = player.points - (scoreChanges.find(sc => sc.playerName === player.name)?.points || 0);
+              return (
+                <div key={player.id} style={{
+                  background: '#fff',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  minWidth: '150px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '4px' }}>
+                    {player.name}
+                  </div>
+                  <div style={{ color: '#666', fontSize: '14px' }}>
+                    {previousPoints} → <span style={{ color: '#28a745', fontWeight: 'bold' }}>{player.points}</span>
+                  </div>
+                  <div style={{
+                    color: '#28a745',
+                    fontWeight: 'bold',
+                    marginTop: '4px',
+                    fontSize: '16px'
+                  }}>
+                    +{player.points - previousPoints} Punkte
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Button zur nächsten Runde */}
+        <button
+          style={{
+            padding: '12px 24px',
+            fontSize: '18px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}
+          onClick={handleContinueToNextRound}
+          onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
+          onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
+        >
+          Nächste Runde starten →
+        </button>
+      </div>
+    );
+  };
+
+  /**
    * Rendert die Warte-Phase
    */
   const renderWaitingPhase = () => {
@@ -387,7 +538,7 @@ function Game({ playerName, gameId }) {
    * Rendert die Hinweis-Gabe-Phase für den Erzähler
    */
   const renderGiveHintPhase = () => (
-    <div style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '16px', color: 'white', textAlign: 'center' }}>
+    <div className="fade-in" style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '16px', color: 'white', textAlign: 'center' }}>
       <h3 style={{ margin: '0 0 20px 0', fontSize: '28px', textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
         🎭 Du bist der Erzähler!
       </h3>
@@ -453,7 +604,7 @@ function Game({ playerName, gameId }) {
       </div>
 
       {/* Kartenauswahl */}
-      <div style={{
+      <TransitionGroup style={{
         display: 'flex',
         flexWrap: 'wrap',
         gap: '16px',
@@ -464,39 +615,42 @@ function Game({ playerName, gameId }) {
         backdropFilter: 'blur(10px)'
       }}>
         {hand.map(card => (
-          <div key={card.id} style={{ position: 'relative' }}>
-            {selectedCard === card.id && (
-              <div style={{
-                position: 'absolute',
-                top: '-10px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: '#ffd700',
-                color: '#333',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                zIndex: 1,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-              }}>
-                ✨ Ausgewählt
-              </div>
-            )}
-            <Card
-              card={card}
-              onClick={() => setSelectedCard(card.id)}
-              selected={selectedCard === card.id}
-              style={{
-                transform: selectedCard === card.id ? 'scale(1.05)' : 'scale(1)',
-                boxShadow: selectedCard === card.id
-                  ? '0 8px 24px rgba(255,215,0,0.4)'
-                  : '0 4px 12px rgba(0,0,0,0.2)'
-              }}
-            />
-          </div>
+          <CSSTransition key={card.id} timeout={400} classNames="card-anim">
+            <div style={{ position: 'relative' }}>
+              {selectedCard === card.id && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-10px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: '#ffd700',
+                  color: '#333',
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  zIndex: 1,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}>
+                  ✨ Ausgewählt
+                </div>
+              )}
+              <Card
+                card={card}
+                onClick={() => setSelectedCard(card.id)}
+                selected={selectedCard === card.id}
+                style={{
+                  transform: selectedCard === card.id ? 'scale(1.08)' : 'scale(1)',
+                  boxShadow: selectedCard === card.id
+                    ? '0 8px 24px rgba(255,215,0,0.4)'
+                    : '0 4px 12px rgba(0,0,0,0.2)',
+                  transition: 'transform 0.3s cubic-bezier(.68,-0.55,.27,1.55), box-shadow 0.3s'
+                }}
+              />
+            </div>
+          </CSSTransition>
         ))}
-      </div>
+      </TransitionGroup>
     </div>
   );
 
@@ -504,7 +658,7 @@ function Game({ playerName, gameId }) {
    * Rendert die Kartenauswahl-Phase
    */
   const renderChooseCardPhase = () => (
-    <div style={{ padding: '20px', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', borderRadius: '16px', color: 'white', textAlign: 'center' }}>
+    <div className="fade-in" style={{ padding: '20px', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', borderRadius: '16px', color: 'white', textAlign: 'center' }}>
       <h3 style={{ margin: '0 0 10px 0', fontSize: '24px', textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
         💭 Wähle deine Karte
       </h3>
@@ -576,39 +730,44 @@ function Game({ playerName, gameId }) {
           borderRadius: '12px',
           backdropFilter: 'blur(10px)'
         }}>
-          {hand.map(card => (
-            <div key={card.id} style={{ position: 'relative' }}>
-              {selectedCard === card.id && (
-                <div style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: '#28a745',
-                  color: 'white',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  zIndex: 1,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                }}>
-                  ✅ Gewählt
+          <TransitionGroup>
+            {hand.map(card => (
+              <CSSTransition key={card.id} timeout={400} classNames="card-anim">
+                <div style={{ position: 'relative' }}>
+                  {selectedCard === card.id && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-10px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: '#28a745',
+                      color: 'white',
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      zIndex: 1,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                    }}>
+                      ✅ Gewählt
+                    </div>
+                  )}
+                  <Card
+                    card={card}
+                    onClick={() => handleChooseCard(card.id)}
+                    selected={selectedCard === card.id}
+                    style={{
+                      transform: selectedCard === card.id ? 'scale(1.08)' : 'scale(1)',
+                      boxShadow: selectedCard === card.id
+                        ? '0 8px 24px rgba(40,167,69,0.4)'
+                        : '0 4px 12px rgba(0,0,0,0.2)',
+                      transition: 'transform 0.3s cubic-bezier(.68,-0.55,.27,1.55), box-shadow 0.3s'
+                    }}
+                  />
                 </div>
-              )}
-              <Card
-                card={card}
-                onClick={() => handleChooseCard(card.id)}
-                selected={selectedCard === card.id}
-                style={{
-                  transform: selectedCard === card.id ? 'scale(1.05)' : 'scale(1)',
-                  boxShadow: selectedCard === card.id
-                    ? '0 8px 24px rgba(40,167,69,0.4)'
-                    : '0 4px 12px rgba(0,0,0,0.2)'
-                }}
-              />
-            </div>
-          ))}
+              </CSSTransition>
+            ))}
+          </TransitionGroup>
         </div>
       )}
     </div>
@@ -625,7 +784,7 @@ function Game({ playerName, gameId }) {
     });
 
     return (
-      <div style={{
+      <div className="fade-in" style={{
         padding: '20px',
         background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
         borderRadius: '16px',
@@ -652,7 +811,7 @@ function Game({ playerName, gameId }) {
           🎯 Wähle die Karte des Erzählers:
         </h4>
 
-        <div style={{
+        <TransitionGroup style={{
           display: 'flex',
           flexWrap: 'wrap',
           gap: '20px',
@@ -678,45 +837,47 @@ function Game({ playerName, gameId }) {
             const isMyCard = mySelectedCard && mySelectedCard.cardId === cardId;
 
             return (
-              <div key={cardId} style={{ position: 'relative' }}>
-                {/* Label für "Your Card" */}
-                {isMyCard && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-12px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#28a745',
-                    color: 'white',
-                    padding: '6px 12px',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    zIndex: 1,
-                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
-                  }}>
-                    🏷️ Your Card
-                  </div>
-                )}
+              <CSSTransition key={cardId} timeout={400} classNames="card-anim">
+                <div style={{ position: 'relative' }}>
+                  {/* Label für "Your Card" */}
+                  {isMyCard && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-12px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: '#28a745',
+                      color: 'white',
+                      padding: '6px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      zIndex: 1,
+                      boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
+                    }}>
+                      🏷️ Your Card
+                    </div>
+                  )}
 
-                <Card
-                  card={card}
-                  onClick={() => handleVote(cardId)}
-                  style={{
-                    opacity: isMyCard ? 0.8 : 1,
-                    border: isMyCard
-                      ? '4px solid #28a745'
-                      : '2px solid rgba(255,255,255,0.3)',
-                    cursor: 'pointer',
-                    borderRadius: '12px',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
-                  }}
-                />
-              </div>
+                  <Card
+                    card={card}
+                    onClick={() => handleVote(cardId)}
+                    style={{
+                      opacity: isMyCard ? 0.8 : 1,
+                      border: isMyCard
+                        ? '4px solid #28a745'
+                        : '2px solid rgba(255,255,255,0.3)',
+                      cursor: 'pointer',
+                      borderRadius: '12px',
+                      transition: 'all 0.3s cubic-bezier(.68,-0.55,.27,1.55)',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+                    }}
+                  />
+                </div>
+              </CSSTransition>
             );
           })}
-        </div>
+        </TransitionGroup>
 
         {/* Voting-Status */}
         <div style={{
@@ -929,86 +1090,6 @@ function Game({ playerName, gameId }) {
   };
 
   /**
-   * Rendert das permanente Scoreboard
-   */
-  const renderScoreboard = () => (
-    <div style={{
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      border: 'none',
-      borderRadius: '16px',
-      padding: '20px',
-      marginBottom: '25px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-      color: 'white'
-    }}>
-      <h4 style={{margin: '0 0 20px 0', textAlign: 'center', fontSize: '22px', textShadow: '2px 2px 4px rgba(0,0,0,0.3)'}}>
-        🏆 Aktuelle Punkte
-      </h4>
-      <div style={{display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '12px'}}>
-        {game?.players?.map(p => (
-          <div key={p.id} style={{
-            textAlign: 'center',
-            padding: '16px',
-            minWidth: '120px',
-            background: p.name === game?.players?.[game?.storytellerIndex]?.name
-              ? 'linear-gradient(135deg, #ffd700, #ffed4a)'
-              : 'rgba(255,255,255,0.2)',
-            borderRadius: '12px',
-            border: p.name === game?.players?.[game?.storytellerIndex]?.name ? '3px solid #ffd700' : '2px solid rgba(255,255,255,0.3)',
-            color: p.name === game?.players?.[game?.storytellerIndex]?.name ? '#333' : 'white',
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-            transition: 'all 0.3s ease'
-          }}>
-            <div style={{fontWeight: 'bold', fontSize: '16px', marginBottom: '8px'}}>{p.name}</div>
-            <div style={{fontSize: '24px', fontWeight: 'bold', marginBottom: '4px'}}>{p.points}</div>
-            {p.name === game?.players?.[game?.storytellerIndex]?.name && (
-              <div style={{fontSize: '12px', fontWeight: 'bold'}}>🎭 Erzähler</div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  /**
-   * Rendert die Ergebnis-Phase inkl. Scoreboard
-   */
-  const renderResultsPhase = () => (
-    <div>
-      <h3>Runde beendet! Punkte:</h3>
-      <table style={{borderCollapse: 'collapse', marginBottom: '1em'}}>
-        <thead>
-          <tr>
-            <th style={{border: '1px solid #ccc', padding: '4px'}}>Spieler</th>
-            <th style={{border: '1px solid #ccc', padding: '4px'}}>Punkte</th>
-            <th style={{border: '1px solid #ccc', padding: '4px'}}>Änderung</th>
-          </tr>
-        </thead>
-        <tbody>
-          {game?.players?.map(p => {
-            const change = scoreChanges.find(s => s.name === p.name);
-            return (
-              <tr key={p.id}>
-                <td style={{border: '1px solid #ccc', padding: '4px'}}>{p.name}</td>
-                <td style={{border: '1px solid #ccc', padding: '4px'}}>{p.points}</td>
-                <td style={{border: '1px solid #ccc', padding: '4px', color: change?.diff > 0 ? 'green' : change?.diff < 0 ? 'red' : '#333'}}>
-                  {change ? (change.diff > 0 ? `+${change.diff}` : change.diff) : ''}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <ul>
-        {game?.players?.map(p => (
-          <li key={p.id}>{p.name}: {p.points}</li>
-        ))}
-      </ul>
-    </div>
-  );
-
-  /**
    * Rendert die Reveal-Phase nach dem Voting
    */
   const renderRevealPhase = () => {
@@ -1050,7 +1131,7 @@ function Game({ playerName, gameId }) {
     }
 
     return (
-      <div>
+      <div className="fade-in">
         <h3>Auflösung: Wer hat welche Karte gelegt?</h3>
         <p style={{marginBottom: '20px', fontSize: '18px'}}>
           Hinweis war: <span style={{color:'#007bff', fontWeight: 'bold'}}>{game?.hint}</span>
@@ -1058,7 +1139,7 @@ function Game({ playerName, gameId }) {
 
         {/* Karten-Auflösung */}
         {revealInfo && revealInfo.length > 0 ? (
-          <div style={{display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', marginBottom: '32px'}}>
+          <TransitionGroup style={{display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', marginBottom: '32px'}}>
             {revealInfo.map(info => {
               // Karte suchen
               const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
@@ -1071,47 +1152,50 @@ function Game({ playerName, gameId }) {
                 };
               }
               return (
-                <div key={info.cardId} style={{
-                  border: info.isStoryteller ? '4px solid #007bff' : '2px solid #ccc',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  background: info.isStoryteller ? '#e3f2fd' : '#fff',
-                  minWidth: '220px',
-                  textAlign: 'center',
-                  boxShadow: info.isStoryteller ? '0 4px 8px rgba(0,123,255,0.3)' : '0 2px 4px rgba(0,0,0,0.1)'
-                }}>
-                  <Card card={card} />
-                  <div style={{marginTop: '12px', fontSize: '16px'}}>
-                    <strong>{info.playerName}</strong>
-                    {info.isStoryteller && (
-                      <div style={{
-                        color:'#007bff',
-                        fontWeight: 'bold',
-                        marginTop: '4px',
-                        padding: '4px 8px',
-                        background: '#fff',
-                        borderRadius: '8px',
-                        border: '1px solid #007bff'
-                      }}>
-                        🎭 Erzähler
-                      </div>
-                    )}
-                  </div>
+                <CSSTransition key={info.cardId} timeout={400} classNames="card-anim">
                   <div style={{
-                    marginTop: '8px',
-                    padding: '4px 8px',
-                    background: info.votes > 0 ? '#28a745' : '#6c757d',
-                    color: 'white',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
+                    border: info.isStoryteller ? '4px solid #007bff' : '2px solid #ccc',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: info.isStoryteller ? '#e3f2fd' : '#fff',
+                    minWidth: '220px',
+                    textAlign: 'center',
+                    boxShadow: info.isStoryteller ? '0 4px 8px rgba(0,123,255,0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
+                    transition: 'box-shadow 0.3s, border 0.3s'
                   }}>
-                    {info.votes} Stimme{info.votes !== 1 ? 'n' : ''}
+                    <Card card={card} />
+                    <div style={{marginTop: '12px', fontSize: '16px'}}>
+                      <strong>{info.playerName}</strong>
+                      {info.isStoryteller && (
+                        <div style={{
+                          color:'#007bff',
+                          fontWeight: 'bold',
+                          marginTop: '4px',
+                          padding: '4px 8px',
+                          background: '#fff',
+                          borderRadius: '8px',
+                          border: '1px solid #007bff'
+                        }}>
+                          🎭 Erzähler
+                        </div>
+                      )}
+                    </div>
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '4px 8px',
+                      background: info.votes > 0 ? '#28a745' : '#6c757d',
+                      color: 'white',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}>
+                      {info.votes} Stimme{info.votes !== 1 ? 'n' : ''}
+                    </div>
                   </div>
-                </div>
+                </CSSTransition>
               );
             })}
-          </div>
+          </TransitionGroup>
         ) : (
           <div style={{textAlign: 'center', marginBottom: '32px'}}>
             <p>Lade Kartendaten...</p>
@@ -1195,7 +1279,7 @@ function Game({ playerName, gameId }) {
     const finalScores = gameWinner?.finalScores || game?.players;
 
     return (
-      <div style={{ textAlign: 'center', padding: '20px' }}>
+      <div className="fade-in" style={{ textAlign: 'center', padding: '20px' }}>
         <h1 style={{
           color: '#28a745',
           fontSize: '48px',
@@ -1269,6 +1353,7 @@ function Game({ playerName, gameId }) {
         {/* Restart Button */}
         <button
           onClick={handleRestartGame}
+          className="pulse-btn"
           style={{
             padding: '15px 30px',
             fontSize: '20px',
@@ -1358,8 +1443,47 @@ function Game({ playerName, gameId }) {
           {phase === 'gameEnd' && renderGameEndPhase()}
         </div>
       </div>
+
+      <style>
+        {`
+        .fade-in {
+          animation: fadeIn 0.7s cubic-bezier(.68,-0.55,.27,1.55);
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px);}
+          to { opacity: 1; transform: translateY(0);}
+        }
+        .card-anim-enter {
+          opacity: 0;
+          transform: scale(0.9) rotate(-2deg);
+        }
+        .card-anim-enter-active {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
+          transition: opacity 400ms, transform 400ms cubic-bezier(.68,-0.55,.27,1.55);
+        }
+        .card-anim-exit {
+          opacity: 1;
+          transform: scale(1);
+        }
+        .card-anim-exit-active {
+          opacity: 0;
+          transform: scale(0.9);
+          transition: opacity 400ms, transform 400ms;
+        }
+        .pulse-btn {
+          animation: pulse 1.2s infinite;
+        }
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(0,123,255,0.4);}
+          70% { box-shadow: 0 0 0 10px rgba(0,123,255,0);}
+          100% { box-shadow: 0 0 0 0 rgba(0,123,255,0);}
+        }
+        `}
+      </style>
     </div>
   );
 }
 
 export default Game;
+// Die Effekte sind in den Style-Tags am Ende der Datei und in den Komponenten selbst eingebaut.
