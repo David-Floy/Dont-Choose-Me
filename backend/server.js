@@ -193,6 +193,26 @@ app.post('/api/game', (req, res) => {
             // Check if already voted
             const hasVoted = voteGame.votes.find(v => v.playerId === player.id);
             if (!hasVoted) {
+
+              // FIX: Verhindere Abstimmung für eigene Karte
+              const mySelectedCard = voteGame.selectedCards.find(sc => sc.playerId === player.id);
+              if (mySelectedCard && mySelectedCard.cardId == cardId) {
+                res.status(400).json({ error: 'Du kannst nicht für deine eigene Karte stimmen!' });
+                break;
+              }
+
+              // Prüfe ob die Karte überhaupt zur Auswahl steht
+              const validCard = voteGame.selectedCards.find(sc => sc.cardId == cardId);
+              if (!validCard) {
+                res.status(400).json({ error: 'Ungültige Kartenauswahl' });
+                break;
+              }
+
+              console.log(`=== VOTE CAST ===`);
+              console.log(`Player: ${playerName} (${player.id})`);
+              console.log(`Voted for card: ${cardId}`);
+              console.log(`Player's own card: ${mySelectedCard?.cardId}`);
+
               voteGame.votes.push({ cardId, playerId: player.id });
 
               // All votes cast?

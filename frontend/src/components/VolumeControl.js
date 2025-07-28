@@ -52,33 +52,34 @@ function VolumeControl({ volume = 0.7, onChange }) {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '20px',
-      right: '20px',
+      bottom: window.innerWidth < 768 ? '15px' : '20px',
+      right: window.innerWidth < 768 ? '15px' : '20px',
       zIndex: 1000,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'flex-end',
-      gap: '10px'
+      gap: window.innerWidth < 768 ? '8px' : '10px'
     }}>
       {/* Horizontaler Slider */}
       {isOpen && (
         <div style={{
           background: 'rgba(0,0,0,0.9)',
           borderRadius: '25px',
-          padding: '15px 20px',
+          padding: window.innerWidth < 768 ? '12px 16px' : '15px 20px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '15px',
+          gap: window.innerWidth < 768 ? '12px' : '15px',
           animation: 'slideIn 0.3s ease-out',
           boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-          minWidth: '200px'
+          minWidth: window.innerWidth < 768 ? '160px' : '200px',
+          maxWidth: window.innerWidth < 480 ? '140px' : 'none'
         }}>
           {/* Audio Status */}
           {audioStatus.currentTrack && (
             <div style={{
               color: 'white',
-              fontSize: '12px',
+              fontSize: window.innerWidth < 768 ? '10px' : '12px',
               textAlign: 'center',
               opacity: 0.8,
               marginBottom: '5px'
@@ -93,7 +94,7 @@ function VolumeControl({ volume = 0.7, onChange }) {
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: window.innerWidth < 768 ? '8px' : '12px',
             width: '100%'
           }}>
             <button
@@ -101,7 +102,7 @@ function VolumeControl({ volume = 0.7, onChange }) {
               style={{
                 background: 'none',
                 border: 'none',
-                fontSize: '16px',
+                fontSize: window.innerWidth < 768 ? '14px' : '16px',
                 cursor: 'pointer',
                 padding: '4px'
               }}
@@ -109,7 +110,12 @@ function VolumeControl({ volume = 0.7, onChange }) {
               {volume > 0 ? '🔊' : '🔇'}
             </button>
 
-            <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold', minWidth: '35px' }}>
+            <span style={{
+              color: 'white',
+              fontSize: window.innerWidth < 768 ? '12px' : '14px',
+              fontWeight: 'bold',
+              minWidth: window.innerWidth < 768 ? '30px' : '35px'
+            }}>
               {Math.round(volume * 100)}%
             </span>
 
@@ -128,7 +134,8 @@ function VolumeControl({ volume = 0.7, onChange }) {
                 outline: 'none',
                 cursor: 'pointer',
                 WebkitAppearance: 'none',
-                MozAppearance: 'none'
+                MozAppearance: 'none',
+                minWidth: window.innerWidth < 480 ? '60px' : '80px'
               }}
             />
           </div>
@@ -137,7 +144,7 @@ function VolumeControl({ volume = 0.7, onChange }) {
           {audioStatus.currentTrack && (
             <div style={{
               display: 'flex',
-              gap: '10px',
+              gap: '8px',
               justifyContent: 'center'
             }}>
               <button
@@ -146,9 +153,9 @@ function VolumeControl({ volume = 0.7, onChange }) {
                   background: 'rgba(255,255,255,0.2)',
                   border: '1px solid rgba(255,255,255,0.3)',
                   borderRadius: '20px',
-                  padding: '6px 12px',
+                  padding: window.innerWidth < 768 ? '4px 8px' : '6px 12px',
                   color: 'white',
-                  fontSize: '12px',
+                  fontSize: window.innerWidth < 768 ? '10px' : '12px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
@@ -170,8 +177,8 @@ function VolumeControl({ volume = 0.7, onChange }) {
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          width: '50px',
-          height: '50px',
+          width: window.innerWidth < 768 ? '45px' : '50px',
+          height: window.innerWidth < 768 ? '45px' : '50px',
           borderRadius: '50%',
           border: 'none',
           background: audioStatus.isPlaying
@@ -179,7 +186,7 @@ function VolumeControl({ volume = 0.7, onChange }) {
             : 'rgba(0,0,0,0.7)',
           backdropFilter: 'blur(5px)',
           color: 'white',
-          fontSize: '20px',
+          fontSize: window.innerWidth < 768 ? '18px' : '20px',
           cursor: 'pointer',
           transition: 'all 0.3s ease',
           display: 'flex',
@@ -210,8 +217,8 @@ function VolumeControl({ volume = 0.7, onChange }) {
             position: 'absolute',
             top: '-2px',
             right: '-2px',
-            width: '12px',
-            height: '12px',
+            width: window.innerWidth < 768 ? '10px' : '12px',
+            height: window.innerWidth < 768 ? '10px' : '12px',
             background: '#00c851',
             borderRadius: '50%',
             border: '2px solid white',
