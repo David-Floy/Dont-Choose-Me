@@ -18,27 +18,19 @@ PicMe/
 ├── frontend/                 # React frontend application
 │   ├── public/
 │   │   ├── images/          # Card images storage
-│   │   │   ├── default/     # Default card deck
-│   │   │   ├── deck-1/      # Additional card deck 1
-│   │   │   └── deck-2/      # Additional card deck 2
 │   │   └── index.html
 │   ├── src/
 │   │   ├── components/      # React components
 │   │   │   ├── App.js      # Main application component
 │   │   │   ├── Lobby.js    # Game lobby management
 │   │   │   ├── Game.js     # Main game logic
-│   │   │   ├── Card.js     # Card display component
-│   │   │   └── DeckSelector.js  # Card deck selection component
+│   │   │   └── Card.js     # Card display component
 │   │   └── index.js        # Application entry point
 │   └── package.json
 ├── backend/                 # Node.js backend server
 │   ├── server.js           # Express server and game logic
-│   ├── cards.json          # Card database with deck information
+│   ├── cards.json          # Card database
 │   ├── AddCards.js         # Card import utility
-│   ├── decks/              # Card deck definitions
-│   │   ├── default.json    # Default deck configuration
-│   │   ├── deck-1.json     # Additional deck 1
-│   │   └── deck-2.json     # Additional deck 2
 │   └── import/             # Directory for new card imports
 └── README.md
 ```
@@ -142,18 +134,6 @@ The frontend will start on port 3000.
 ### Next Development Phase
 The following features are planned for the next development iteration:
 
-#### 🃏 Multiple Card Decks
-- **Deck Management System**: Support for multiple themed card collections
-- **Deck Categories**: Organization by themes (fantasy, nature, abstract, etc.)
-- **Deck Metadata**: Name, description, theme, difficulty level for each deck
-- **Import Utility Enhancement**: Ability to import cards into specific decks
-
-#### 🎨 Lobby Deck Selection
-- **Deck Preview**: Visual preview of available decks in lobby
-- **Deck Combination**: Option to combine multiple decks for variety
-- **Deck Information**: Display deck size, theme, and preview cards
-- **Host Controls**: Lobby leader can select which decks to use
-
 #### ✨ UI/UX Improvements
 - **Modern Design Language**: Updated visual design with improved aesthetics
 - **Enhanced Animations**: Smooth transitions between game phases
@@ -162,59 +142,7 @@ The following features are planned for the next development iteration:
 - **Loading States**: Improved feedback during game state changes
 - **Error Handling**: Better user feedback for connection issues
 
-## 📁 Card Deck Management
-
-### Current Implementation
-Cards are currently stored in a single collection in `cards.json` and images in `frontend/public/images/`.
-
-### Planned Deck Structure
-```
-frontend/public/images/
-├── default/              # Default card deck
-│   ├── card1.jpg
-│   ├── card2.jpg
-│   └── ...
-├── fantasy/              # Fantasy-themed deck
-│   ├── dragon.jpg
-│   ├── wizard.jpg
-│   └── ...
-└── nature/               # Nature-themed deck
-    ├── forest.jpg
-    ├── ocean.jpg
-    └── ...
-```
-
-### Deck Configuration Format
-```json
-{
-  "id": "fantasy",
-  "name": "Fantasy Adventure",
-  "description": "Mystical creatures and magical landscapes",
-  "theme": "fantasy",
-  "difficulty": "medium",
-  "cardCount": 84,
-  "previewCards": ["dragon.jpg", "wizard.jpg", "castle.jpg"],
-  "cards": [...]
-}
-```
-
-### Adding New Decks
-1. Create a new folder in `frontend/public/images/[deck-name]/`
-2. Place themed image files in the deck folder
-3. Run the enhanced card import utility:
-   ```bash
-   cd backend
-   node AddCards.js --deck [deck-name] --theme [theme]
-   ```
-4. Configure deck metadata in `backend/decks/[deck-name].json`
-
-## 🌐 Enhanced API Endpoints
-
-### Deck Management (Planned)
-- `GET /api/decks` - Retrieve all available decks
-- `GET /api/decks/:deckId` - Get specific deck information
-- `GET /api/decks/:deckId/preview` - Get preview cards for a deck
-- `POST /api/game/selectDecks` - Set active decks for a game room
+## 🌐 API Endpoints
 
 ### Game Management
 - `POST /api/game` - Main game endpoint for all actions
@@ -230,66 +158,34 @@ frontend/public/images/
 ### Card Management
 - `GET /api/cards` - Retrieve all available cards
 
-## 🎨 Enhanced UI Components
+## 🎨 UI Components
 
-### Lobby Component (Enhanced)
+### Lobby Component
 - Player name and room ID input
-- **Deck Selection Interface**: Choose from available card decks
-- **Deck Preview**: Visual representation of selected decks
 - Quick join buttons for common room names
 - Real-time player list with lobby leader indication
-- **Game Configuration**: Settings for deck combination and game rules
 - Minimum player count validation
 
-### Game Component (Enhanced)
+### Game Component
 - Dynamic phase-based UI rendering
-- **Improved Card Animations**: Smooth card transitions and effects
 - Interactive card selection and voting
-- **Enhanced Scoreboard**: Better visual hierarchy and information display
+- Real-time scoreboard
 - Detailed reveal phase with voting results
-- **Mobile-Optimized Interface**: Touch-friendly controls
 - Game end screen with final rankings
 
-### New Components (Planned)
-- **DeckSelector**: Interactive deck selection with previews
-- **DeckPreview**: Shows deck information and sample cards
-- **GameSettings**: Configuration options for game rules
-- **LoadingSpinner**: Consistent loading states across the app
-- **ErrorBoundary**: Graceful error handling and recovery
+### Card Component
+- Responsive card display
+- Interactive hover effects
+- Selection state visualization
+- Fallback image handling
 
-## 🔄 Enhanced Game Flow
+## 🔄 Game Flow
 
 ```
-Lobby → Deck Selection → Storytelling → Card Selection → Voting → Reveal → Next Round
-  ↑           ↓                                                      ↓
-  ←←← Game Settings ←←←←←←←←←←←←←←←←←←←←← Game End ←←←←←←←←←←←←←←←←←←←←
+Lobby → Storytelling → Card Selection → Voting → Reveal → Next Round
+  ↑                                                          ↓
+  ←←←←←←←←←←←←← Game End (when player reaches 30 points) ←←←←←
 ```
-
-## 🎯 UX Improvements Roadmap
-
-### Phase 1: Core Deck System
-- [ ] Implement deck management backend
-- [ ] Create deck selection UI in lobby
-- [ ] Update card import utility for decks
-- [ ] Test with multiple themed decks
-
-### Phase 2: Enhanced Lobby Experience
-- [ ] Visual deck previews
-- [ ] Deck combination options
-- [ ] Game settings interface
-- [ ] Improved player management
-
-### Phase 3: UI/UX Overhaul
-- [ ] Modern design system implementation
-- [ ] Enhanced animations and transitions
-- [ ] Mobile-responsive design improvements
-- [ ] Accessibility enhancements
-
-### Phase 4: Advanced Features
-- [ ] Deck rating and favorites
-- [ ] Custom deck creation tools
-- [ ] Advanced game statistics
-- [ ] Social features and sharing
 
 ## 🐛 Troubleshooting
 
