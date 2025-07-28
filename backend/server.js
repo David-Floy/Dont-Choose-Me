@@ -71,15 +71,32 @@ app.use('/images', express.static(path.join(__dirname, 'images')));
 // Statische Dateien servieren - nur in Produktion
 if (isProduction) {
   const buildPath = path.join(__dirname, 'build');
+  console.log(`🔍 Suche Build-Ordner in: ${buildPath}`);
+  
   if (fs.existsSync(buildPath)) {
     app.use(express.static(buildPath));
-
+    console.log(`✅ Serving static files from: ${buildPath}`);
+    
     // Fallback-Route für SPA
     app.get('*', (req, res) => {
-      res.sendFile(path.join(buildPath, 'index.html'));
+      const indexPath = path.join(buildPath, 'index.html');
+      console.log(`📄 Serving index.html from: ${indexPath}`);
+      res.sendFile(indexPath);
     });
   } else {
-    console.error('Build-Ordner nicht gefunden! Führe "npm run build" aus.');
+    console.error('❌ Build-Ordner nicht gefunden!');
+    console.error('💡 Führe "npm run build:all" aus oder stelle sicher, dass der Build-Prozess erfolgreich war.');
+    
+    // Fallback für fehlenden Build
+    app.get('*', (req, res) => {
+      res.status(503).send(`
+        <h1>🚧 Service wird aufgebaut...</h1>
+        <p>Der Build-Prozess ist noch nicht abgeschlossen.</p>
+        <p>Versuche es in wenigen Minuten erneut.</p>
+        <hr>
+        <p><small>Build-Pfad: ${buildPath}</small></p>
+      `);
+    });
   }
 } else {
   // Entwicklungsumgebung - zeige Infoseite

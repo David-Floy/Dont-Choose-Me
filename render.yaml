@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: picme-game-server
+    env: node
+    plan: free
+    buildCommand: npm run render:build
+    startCommand: npm run render:start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        generateValue: true
+    regions:
+      - frankfurt
+
