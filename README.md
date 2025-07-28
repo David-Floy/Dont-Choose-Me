@@ -41,7 +41,9 @@ PicMe/
 - Node.js (v14 or higher)
 - npm or yarn package manager
 
-### Backend Setup
+### Local Development Setup
+
+#### Backend Setup
 ```bash
 cd backend
 npm install
@@ -49,13 +51,35 @@ node server.js
 ```
 The backend server will start on port 3001.
 
-### Frontend Setup
+#### Frontend Setup
 ```bash
 cd frontend
 npm install
 npm start
 ```
 The frontend will start on port 3000.
+
+### Production Deployment on Render
+
+#### Root Directory
+```bash
+./backend
+```
+
+#### Build Command
+```bash
+npm run render:build
+```
+
+#### Start Command
+```bash
+npm run render:start
+```
+
+#### Environment Variables
+- Set `NODE_ENV=production` for production builds
+- The server will automatically serve static files in production mode
+- Frontend build files should be placed in the `backend/build` directory
 
 ## 🎯 Game Rules
 
