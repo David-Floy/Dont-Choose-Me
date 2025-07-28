@@ -187,14 +187,8 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
   if (!isInLobby) {
     return (
       <div style={{ position: 'relative' }}>
-        {/* Lautstärkeregler in der rechten oberen Ecke */}
-        <div style={{
-          position: 'absolute',
-          right: '15px',
-          top: '15px'
-        }}>
-          <VolumeControl volume={volume} onChange={handleVolumeChange} />
-        </div>
+        {/* VolumeControl positioniert sich jetzt selbst */}
+        <VolumeControl volume={volume} onChange={handleVolumeChange} />
 
         {/* Join Form */}
         <div style={{ marginBottom: '30px' }}>
@@ -377,14 +371,8 @@ function Lobby({ gameId, setGameId, playerName, setPlayerName, onGameStart }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* Lautstärkeregler in der rechten oberen Ecke */}
-      <div style={{
-        position: 'absolute',
-        right: '15px',
-        top: '15px'
-      }}>
-        <VolumeControl volume={volume} onChange={handleVolumeChange} />
-      </div>
+      {/* VolumeControl positioniert sich jetzt selbst */}
+      <VolumeControl volume={volume} onChange={handleVolumeChange} />
 
       {/* Lobby Header */}
       <div style={{

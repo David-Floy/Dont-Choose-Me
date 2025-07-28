@@ -1,17 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 
 /**
- * Interaktiver Lautstärkeregler mit kippbarem Balken
+ * Einfacher Lautstärkeregler mit horizontalem Slider
  * @param {number} props.volume - Aktuelle Lautstärke (0 bis 1)
  * @param {function} props.onChange - Callback für Lautstärkeänderungen
  */
 function VolumeControl({ volume = 0.7, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [rotationAngle, setRotationAngle] = useState(() => volume * 90 - 45); // -45° (stumm) bis +45° (max)
-  const [showEmoji, setShowEmoji] = useState(false);
-  const containerRef = useRef(null);
-  const barRef = useRef(null);
 
   // Emoji basierend auf Lautstärke auswählen
   const getVolumeEmoji = () => {
@@ -21,102 +16,67 @@ function VolumeControl({ volume = 0.7, onChange }) {
     return '🔊';
   };
 
-  // Animiertes Emoji bei Lautstärkeänderung zeigen
-  useEffect(() => {
-    if (isDragging) {
-      setShowEmoji(true);
-      const timeout = setTimeout(() => setShowEmoji(false), 800);
-      return () => clearTimeout(timeout);
-    }
-  }, [volume, isDragging]);
-
-  // Winkel in Lautstärke umwandeln und umgekehrt
-  const angleToVolume = (angle) => {
-    const normalized = (angle + 45) / 90; // -45° bis +45° auf 0-1 normalisieren
-    return Math.max(0, Math.min(1, normalized)); // Auf 0-1 beschränken
-  };
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchmove', handleTouchMove);
-    document.addEventListener('touchend', handleMouseUp);
-    e.preventDefault();
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-    document.removeEventListener('touchmove', handleTouchMove);
-    document.removeEventListener('touchend', handleMouseUp);
-  };
-
-  const handleTouchMove = (e) => {
-    if (isDragging && e.touches && e.touches[0]) {
-      handleVolumeChange(e.touches[0].clientY);
-    }
-  };
-
-  const handleMouseMove = (e) => {
-    if (isDragging) {
-      handleVolumeChange(e.clientY);
-    }
-  };
-
-  const handleVolumeChange = (clientY) => {
-    if (!barRef.current || !containerRef.current) return;
-
-    // Position des Balkens
-    const barRect = barRef.current.getBoundingClientRect();
-    const containerRect = containerRef.current.getBoundingClientRect();
-
-    // Y-Position der Mitte des Balkens
-    const barCenterY = barRect.top + barRect.height / 2;
-
-    // Relative Position der Maus zum Balken (negative = über dem Balken)
-    const relativePosition = clientY - barCenterY;
-
-    // Normalisieren auf Balkengröße und in Winkel umwandeln
-    const sensitivity = 1.5; // Empfindlichkeit der Neigung
-    const maxAngle = 45; // Maximaler Neigungswinkel
-    let newAngle = relativePosition / (barRect.height / 2) * maxAngle * sensitivity;
-
-    // Begrenze den Winkel auf -45° bis +45°
-    newAngle = Math.max(-maxAngle, Math.min(maxAngle, newAngle));
-
-    setRotationAngle(newAngle);
-
-    // Berechne neue Lautstärke (0-1) und rufe onChange auf
-    const newVolume = angleToVolume(newAngle);
+  const handleSliderChange = (e) => {
+    const newVolume = parseFloat(e.target.value);
     onChange(newVolume);
-  };
-
-  // Balken-Farbe basierend auf Lautstärke
-  const getBarColor = () => {
-    if (volume <= 0.1) return '#dc3545'; // rot bei stumm
-    if (volume <= 0.4) return '#ffc107'; // gelb bei leise
-    if (volume <= 0.7) return '#28a745'; // grün bei mittel
-    return '#007bff'; // blau bei laut
   };
 
   return (
     <div style={{
-      position: 'relative',
-      width: '40px',
-      height: '40px',
-      cursor: 'pointer',
+      position: 'fixed',
+      bottom: '20px',
+      right: '20px',
+      zIndex: 1000,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      gap: '10px'
     }}>
-      {/* Hauptbutton */}
+      {/* Horizontaler Slider */}
+      {isOpen && (
+        <div style={{
+          background: 'rgba(0,0,0,0.8)',
+          borderRadius: '25px',
+          padding: '12px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          animation: 'slideIn 0.3s ease-out',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+        }}>
+          <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>
+            {Math.round(volume * 100)}%
+          </span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={volume}
+            onChange={handleSliderChange}
+            style={{
+              width: '120px',
+              height: '6px',
+              borderRadius: '3px',
+              background: `linear-gradient(to right, #007bff 0%, #007bff ${volume * 100}%, #ddd ${volume * 100}%, #ddd 100%)`,
+              outline: 'none',
+              cursor: 'pointer',
+              WebkitAppearance: 'none',
+              MozAppearance: 'none'
+            }}
+          />
+        </div>
+      )}
+
+      {/* Volume Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          width: '100%',
-          height: '100%',
+          width: '50px',
+          height: '50px',
           borderRadius: '50%',
           border: 'none',
-          background: 'rgba(255,255,255,0.2)',
+          background: 'rgba(0,0,0,0.7)',
           backdropFilter: 'blur(5px)',
           color: 'white',
           fontSize: '20px',
@@ -126,128 +86,45 @@ function VolumeControl({ volume = 0.7, onChange }) {
           justifyContent: 'center',
           alignItems: 'center',
           outline: 'none',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
         }}
-        onMouseOver={(e) => e.target.style.transform = 'scale(1.1)'}
-        onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+        onMouseOver={(e) => {
+          e.target.style.transform = 'scale(1.1)';
+          e.target.style.background = 'rgba(0,0,0,0.9)';
+        }}
+        onMouseOut={(e) => {
+          e.target.style.transform = 'scale(1)';
+          e.target.style.background = 'rgba(0,0,0,0.7)';
+        }}
       >
         {getVolumeEmoji()}
       </button>
 
-      {/* Emoji-Popup zur Anzeige bei Änderungen */}
-      {showEmoji && (
-        <div style={{
-          position: 'absolute',
-          top: '-50px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.7)',
-          padding: '8px',
-          borderRadius: '8px',
-          animation: 'fadeInOut 0.8s',
-          fontSize: '24px',
-          zIndex: 100,
-        }}>
-          {getVolumeEmoji()}
-        </div>
-      )}
-
-      {/* Kippbarer Lautstärke-Slider */}
-      {isOpen && (
-        <div
-          ref={containerRef}
-          style={{
-            position: 'absolute',
-            bottom: '50px',
-            left: 'calc(50% - 20px)',
-            width: '40px',
-            height: '150px',
-            background: 'rgba(0,0,0,0.7)',
-            borderRadius: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: '10px 0',
-            animation: 'fadeIn 0.3s',
-            zIndex: 10,
-          }}
-        >
-          {/* Lautstärke-Prozent Anzeige */}
-          <div style={{
-            color: 'white',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            position: 'absolute',
-            top: '10px',
-            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-          }}>
-            {Math.round(volume * 100)}%
-          </div>
-
-          {/* Anleitung */}
-          <div style={{
-            color: 'white',
-            fontSize: '10px',
-            opacity: 0.8,
-            position: 'absolute',
-            bottom: '8px',
-            textAlign: 'center',
-            padding: '0 5px',
-            whiteSpace: 'nowrap',
-          }}>
-            Balken neigen!
-          </div>
-
-          {/* Der kippbare Balken */}
-          <div
-            ref={barRef}
-            style={{
-              width: '8px',
-              height: '80px',
-              background: getBarColor(),
-              borderRadius: '4px',
-              cursor: 'grab',
-              transition: isDragging ? 'none' : 'transform 0.2s, background-color 0.2s',
-              transform: `rotate(${rotationAngle}deg)`,
-              transformOrigin: 'center',
-              boxShadow: '0 0 10px rgba(0,0,0,0.3)',
-            }}
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleMouseDown}
-          />
-
-          {/* Markierungen */}
-          <div style={{
-            width: '30px',
-            height: '1px',
-            background: 'rgba(255,255,255,0.5)',
-            position: 'absolute',
-            top: '40%',
-            left: '5px',
-          }} />
-          <div style={{
-            width: '30px',
-            height: '1px',
-            background: 'rgba(255,255,255,0.5)',
-            position: 'absolute',
-            bottom: '40%',
-            left: '5px',
-          }} />
-        </div>
-      )}
-
       <style>
         {`
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+          @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
           }
-          @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
-            20% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            80% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+          
+          input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          }
+          
+          input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
           }
         `}
       </style>

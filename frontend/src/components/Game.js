@@ -1576,6 +1576,9 @@ function Game({ playerName, gameId }) {
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       padding: '20px'
     }}>
+      {/* VolumeControl positioniert sich jetzt selbst */}
+      <VolumeControl volume={volume} onChange={handleVolumeChange} />
+
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <div style={{
           textAlign: 'center',
@@ -1598,15 +1601,6 @@ function Game({ playerName, gameId }) {
             Aktueller Spieler: <strong>{playerName}</strong> |
             Erzähler: <strong>{game?.players?.[game?.storytellerIndex]?.name}</strong>
           </p>
-
-          {/* Lautstärkeregler in der rechten oberen Ecke */}
-          <div style={{
-            position: 'absolute',
-            right: '15px',
-            top: '15px'
-          }}>
-            <VolumeControl volume={volume} onChange={handleVolumeChange} />
-          </div>
         </div>
 
         {/* Permanentes Scoreboard */}
