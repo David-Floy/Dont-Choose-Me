@@ -1,14 +1,12 @@
 /**
  * Zentraler AudioManager für die Musikverwaltung
  */
-class AudioManager {
-  constructor() {
-    this.currentAudio = null;
-    this.volume = 0.3; // Reduzierte Standard-Lautstärke
-    this.isPlaying = false;
-    this.currentTrack = null;
-    this.fadeInterval = null;
-  }
+const audioManager = {
+  currentAudio: null,
+  volume: 0.3, // Reduzierte Standard-Lautstärke
+  isPlaying: false,
+  currentTrack: null,
+  fadeInterval: null,
 
   /**
    * Spielt eine Musikdatei ab
@@ -35,7 +33,7 @@ class AudioManager {
     } else {
       this.startNewTrack(trackName, loop, fadeInDuration);
     }
-  }
+  },
 
   /**
    * Startet eine neue Musikdatei
@@ -71,7 +69,7 @@ class AudioManager {
     } catch (error) {
       console.error(`❌ AudioManager: Allgemeiner Fehler bei ${trackName}:`, error);
     }
-  }
+  },
 
   /**
    * Stoppt die aktuelle Musik
@@ -89,7 +87,7 @@ class AudioManager {
         this.cleanupAudio();
       }
     }
-  }
+  },
 
   /**
    * Bereinigt Audio-Ressourcen
@@ -107,7 +105,7 @@ class AudioManager {
       clearInterval(this.fadeInterval);
       this.fadeInterval = null;
     }
-  }
+  },
 
   /**
    * Setzt die Lautstärke
@@ -121,7 +119,7 @@ class AudioManager {
     }
 
     console.log(`🔊 AudioManager: Lautstärke auf ${Math.round(this.volume * 100)}% gesetzt`);
-  }
+  },
 
   /**
    * Fade-in Effekt
@@ -150,7 +148,7 @@ class AudioManager {
       this.currentAudio.volume = volumeStep * currentStep;
       currentStep++;
     }, stepTime);
-  }
+  },
 
   /**
    * Fade-out Effekt
@@ -181,7 +179,7 @@ class AudioManager {
       this.currentAudio.volume = Math.max(0, this.currentAudio.volume - volumeStep);
       currentStep++;
     }, stepTime);
-  }
+  },
 
   /**
    * Pausiert/Resumes die Musik
@@ -203,7 +201,7 @@ class AudioManager {
           console.error('❌ AudioManager: Fehler beim Fortsetzen:', error);
         });
     }
-  }
+  },
 
   /**
    * Gibt den aktuellen Status zurück
@@ -214,9 +212,18 @@ class AudioManager {
       currentTrack: this.currentTrack,
       volume: this.volume
     };
-  }
-}
+  },
 
-// Singleton Instance
-const audioManager = new AudioManager();
+  /**
+   * Spielt einen Soundeffekt ab
+   * @param {string} src - Pfad zur Sounddatei
+   */
+  playEffect(src) {
+    // src muss mit / beginnen und Datei muss in public/sounds liegen!
+    const audio = new window.Audio(src);
+    audio.volume = 0.02;
+    audio.play();
+  }
+};
+
 export default audioManager;
