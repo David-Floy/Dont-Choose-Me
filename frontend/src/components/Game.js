@@ -807,7 +807,7 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
       {/* Hinweis-Eingabe mit Button - Mobile optimiert */}
       <div style={{
-        display: 'flex',
+        display: 'flex',//
         justifyContent: 'center',
         gap: '10px',
         marginBottom: '20px',

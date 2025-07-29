@@ -264,7 +264,11 @@ class GameManager {
 
     game.round += 1;
 
-    // FIX: Erzähler-Rotation - stelle sicher dass der Index korrekt rotiert
+    // ERZÄHLER-ROTATION: Der nächste Erzähler wird automatisch ausgewählt
+    // Funktionsweise:
+    // - Aktueller Index + 1 = nächster Spieler
+    // - Modulo (%) sorgt dafür, dass nach dem letzten Spieler wieder der erste drankommt
+    // Beispiel bei 4 Spielern: 0→1→2→3→0→1→2→3...
     const oldStoryteller = game.storytellerIndex;
     game.storytellerIndex = (game.storytellerIndex + 1) % game.players.length;
 
@@ -272,7 +276,7 @@ class GameManager {
     console.log(`Old storyteller: ${game.players[oldStoryteller]?.name}`);
     console.log(`New storyteller: ${game.players[game.storytellerIndex]?.name}`);
 
-    // Zusätzliche Validierung
+    // Sicherheitsvalidierung: Prüfe ob der neue Index gültig ist
     if (game.storytellerIndex >= game.players.length || game.storytellerIndex < 0) {
       console.error(`ERROR: Invalid storyteller index ${game.storytellerIndex} for ${game.players.length} players`);
       game.storytellerIndex = 0; // Fallback zum ersten Spieler
