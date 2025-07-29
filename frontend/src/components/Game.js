@@ -199,10 +199,9 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
       if (response.ok) {
         const data = await response.json();
-        // Storyteller-Sound nur für Erzähler abspielen (neuer Soundname)
         const storyteller = game?.players?.[game?.storytellerIndex];
-        if (storyteller?.name === playerName) {
-          audioManager.playEffect('/sounds/storyteller.mp3');
+        if (storyteller?.name == playerName) {
+          audioManager.playEffect('frontend/public/sounds/storyteller.mp3');
         }
         setSelectedCard(null);
         setHint('');
