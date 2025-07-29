@@ -709,9 +709,7 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
       padding: window.innerWidth < 768 ? '10px' : '20px',
       position: 'relative'
     }}>
-      {/* VolumeControl positioniert sich selbst */}
       <VolumeControl volume={volume} onChange={handleVolumeChange} />
-
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
@@ -764,24 +762,21 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
             </div>
           )}
         </div>
-
-        {/* Permanent scoreboard */}
         {game.state === 'playing' && renderScoreboard()}
-
         <div style={{
           background: 'rgba(255,255,255,0.05)',
           borderRadius: '16px',
           padding: window.innerWidth < 768 ? '10px' : '20px'
         }}>
           {phase === 'waiting' && renderWaitingPhase({ game, playerName, hand, allCards })}
-          {phase === 'giveHint' && renderGiveHintPhase({ game, playerName, hand, selectedCard, setSelectedCard, hint, setHint, handleGiveHint })}
-          {phase === 'chooseCard' && renderChooseCardPhase({ game, playerName, hand, selectedCard, setSelectedCard, handleChooseCard })}
+          {phase === 'giveHint' && renderGiveHintPhase({ hand, selectedCard, setSelectedCard, hint, setHint, handleGiveHint })}
+          {phase === 'chooseCard' && renderChooseCardPhase({ game, hand, selectedCard, setSelectedCard, handleChooseCard, playerName, gameId, setGame, updateHand })}
           {phase === 'vote' && renderVotePhase({ game, playerName, mixedCards, allCards, handleVote })}
           {phase === 'voteWatch' && renderVoteWatchPhase({ game, playerName, mixedCards, allCards })}
           {phase === 'waitingAfterVote' && renderWaitingAfterVotePhase({ game, playerName, mixedCards, allCards })}
           {phase === 'reveal' && renderRevealPhase()}
           {phase === 'results' && renderResultsPhase()}
-          {phase === 'gameEnd' && renderGameEndPhase({ gameWinner, handleRestartGame })}
+          {phase === 'gameEnd' && renderGameEndPhase({ gameWinner, game, handleRestartGame })}
         </div>
       </div>
     </div>
