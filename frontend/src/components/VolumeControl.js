@@ -27,8 +27,8 @@ function VolumeControl({ volume = 0.7, onChange }) {
   // Emoji basierend auf Lautstärke auswählen
   const getVolumeEmoji = () => {
     if (volume <= 0.001) return '🔇';
-    if (volume <= 0.4) return '🔈';
-    if (volume <= 0.7) return '🔉';
+    if (volume <= 0.2) return '🔈';
+    if (volume <= 0.5) return '🔉';
     return '🔊';
   };
 
@@ -38,8 +38,15 @@ function VolumeControl({ volume = 0.7, onChange }) {
     audioManager.setVolume(newVolume);
   };
 
+  const handleVolumeStep = (step) => {
+    // Berechne neue Lautstärke in 1%-Schritten (0.01)
+    const newVolume = Math.min(1, Math.max(0, volume + step));
+    onChange(newVolume);
+    audioManager.setVolume(newVolume);
+  };
+
   const handleMuteToggle = () => {
-    const newVolume = volume > 0 ? 0 : 0.7;
+    const newVolume = volume > 0 ? 0 : 0.1; // Auf 10% setzen wenn unmuted
     onChange(newVolume);
     audioManager.setVolume(newVolume);
   };
@@ -104,17 +111,20 @@ function VolumeControl({ volume = 0.7, onChange }) {
                 border: 'none',
                 fontSize: window.innerWidth < 768 ? '14px' : '16px',
                 cursor: 'pointer',
-                padding: '4px'
+                padding: '4px',
+                color: 'white'
               }}
             >
               {volume > 0 ? '🔊' : '🔇'}
             </button>
 
+            {/* Lautstärkeanzeige */}
             <span style={{
               color: 'white',
               fontSize: window.innerWidth < 768 ? '12px' : '14px',
               fontWeight: 'bold',
-              minWidth: window.innerWidth < 768 ? '30px' : '35px'
+              minWidth: window.innerWidth < 768 ? '40px' : '45px',
+              textAlign: 'center'
             }}>
               {Math.round(volume * 100)}%
             </span>
@@ -123,7 +133,7 @@ function VolumeControl({ volume = 0.7, onChange }) {
               type="range"
               min="0"
               max="1"
-              step="0.05"
+              step="0.01" // Feiner abgestuft für 1%-Schritte
               value={volume}
               onChange={handleSliderChange}
               style={{
@@ -138,6 +148,50 @@ function VolumeControl({ volume = 0.7, onChange }) {
                 minWidth: window.innerWidth < 480 ? '60px' : '80px'
               }}
             />
+
+            {/* 1%-Schritte-Buttons */}
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button
+                onClick={() => handleVolumeStep(-0.01)} // 1% reduzieren
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  padding: 0
+                }}
+              >
+                -
+              </button>
+              <button
+                onClick={() => handleVolumeStep(0.01)} // 1% erhöhen
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'white',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  padding: 0
+                }}
+              >
+                +
+              </button>
+            </div>
           </div>
 
           {/* Music Controls */}
@@ -194,7 +248,8 @@ function VolumeControl({ volume = 0.7, onChange }) {
           alignItems: 'center',
           outline: 'none',
           boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-          position: 'relative'
+          position: 'relative',
+          padding: 0 // Entfernt unnötiges Padding
         }}
         onMouseOver={(e) => {
           e.target.style.transform = 'scale(1.1)';
@@ -209,7 +264,16 @@ function VolumeControl({ volume = 0.7, onChange }) {
             : 'rgba(0,0,0,0.7)';
         }}
       >
-        {getVolumeEmoji()}
+        <span style={{
+          lineHeight: '1', // Verbessert vertikale Zentrierung
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: '100%',
+          height: '100%'
+        }}>
+          {getVolumeEmoji()}
+        </span>
 
         {/* Music indicator */}
         {audioStatus.isPlaying && (

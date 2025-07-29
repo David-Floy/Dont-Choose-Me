@@ -32,7 +32,7 @@ function App() {
   const [gameId, setGameId] = useState('');
   const [playerName, setPlayerName] = useState('');
   const [isInGame, setIsInGame] = useState(false);
-  const [volume, setVolume] = useState(0.3); // Reduzierte Standard-Lautstärke
+  const [volume, setVolume] = useState(0.1); // Reduzierte Standard-Lautstärke auf 10%
 
   // Initialisiere AudioManager beim App-Start
   useEffect(() => {

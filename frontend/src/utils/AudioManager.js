@@ -4,10 +4,12 @@
 class AudioManager {
   constructor() {
     this.currentAudio = null;
-    this.volume = 0.3; // Reduzierte Standard-Lautstärke
+    this.volume = 0.1; // Reduzierte Standard-Lautstärke auf 10%
     this.isPlaying = false;
     this.currentTrack = null;
     this.fadeInterval = null;
+    this.audioQueue = []; // Queue für geplante Audio-Wechsel
+    this.isTransitioning = false; // Flag für laufende Übergänge
   }
 
   /**
@@ -24,8 +26,16 @@ class AudioManager {
 
     console.log(`🎵 AudioManager: Starte ${trackName}`);
 
+    // Wenn gerade ein Übergang läuft, zur Queue hinzufügen
+    if (this.isTransitioning) {
+      this.audioQueue.push({ trackName, loop, fadeInDuration });
+      console.log(`🎵 AudioManager: ${trackName} zur Queue hinzugefügt (Übergang läuft)`);
+      return;
+    }
+
     // Stoppe aktuelle Musik mit Fade-out
     if (this.currentAudio && this.isPlaying) {
+      this.isTransitioning = true;
       this.stopTrack(500); // 500ms fade-out
 
       // Warte kurz bevor neue Musik startet
@@ -45,31 +55,76 @@ class AudioManager {
    */
   startNewTrack(trackName, loop, fadeInDuration) {
     try {
+      // Bereinige vorherige Audio-Instanz
+      if (this.currentAudio) {
+        this.currentAudio.pause();
+        this.currentAudio.src = '';
+        this.currentAudio.removeAttribute('src');
+        this.currentAudio.load();
+      }
+
+      // Erstelle neue Audio-Instanz
       this.currentAudio = new Audio(`/sounds/${trackName}`);
       this.currentAudio.loop = loop;
       this.currentAudio.volume = 0; // Starte bei 0 für Fade-in
       this.currentTrack = trackName;
 
+      // Ereignis-Handler vor dem Laden hinzufügen
       this.currentAudio.addEventListener('canplaythrough', () => {
+        if (!this.currentAudio) return; // Sicherheitsüberprüfung
+
         this.currentAudio.play()
           .then(() => {
             this.isPlaying = true;
             this.fadeIn(fadeInDuration);
             console.log(`✅ AudioManager: ${trackName} gestartet`);
+
+            // Übergangsstatus zurücksetzen
+            this.isTransitioning = false;
+
+            // Nächsten Track aus der Queue starten, falls vorhanden
+            if (this.audioQueue.length > 0) {
+              const nextTrack = this.audioQueue.shift();
+              console.log(`🎵 AudioManager: Starte nächsten Track aus Queue: ${nextTrack.trackName}`);
+              this.playTrack(nextTrack.trackName, nextTrack.loop, nextTrack.fadeInDuration);
+            }
           })
           .catch(error => {
             console.error(`❌ AudioManager: Fehler beim Abspielen von ${trackName}:`, error);
+            this.isTransitioning = false; // Fehlerfall: Status zurücksetzen
+            this.handleAudioError();
           });
-      });
+      }, { once: true }); // Event nur einmal auslösen
 
       this.currentAudio.addEventListener('error', (error) => {
         console.error(`❌ AudioManager: Ladefehler für ${trackName}:`, error);
+        this.isTransitioning = false; // Fehlerfall: Status zurücksetzen
+        this.handleAudioError();
       });
 
       // Lade die Audiodatei
       this.currentAudio.load();
     } catch (error) {
       console.error(`❌ AudioManager: Allgemeiner Fehler bei ${trackName}:`, error);
+      this.isTransitioning = false; // Fehlerfall: Status zurücksetzen
+      this.handleAudioError();
+    }
+  }
+
+  /**
+   * Behandelt Audio-Fehler und versucht Wiederherstellung
+   */
+  handleAudioError() {
+    // Audio-Instanz bereinigen
+    this.cleanupAudio();
+
+    // Versuche den nächsten Track in der Queue, falls vorhanden
+    if (this.audioQueue.length > 0) {
+      const nextTrack = this.audioQueue.shift();
+      console.log(`🔄 AudioManager: Versuche nächsten Track nach Fehler: ${nextTrack.trackName}`);
+      setTimeout(() => {
+        this.playTrack(nextTrack.trackName, nextTrack.loop, nextTrack.fadeInDuration);
+      }, 1000); // Kurze Verzögerung vor neuem Versuch
     }
   }
 
@@ -88,6 +143,9 @@ class AudioManager {
       } else {
         this.cleanupAudio();
       }
+    } else {
+      // Bereits gestoppt oder kein Audio
+      this.isTransitioning = false;
     }
   }
 
@@ -97,7 +155,9 @@ class AudioManager {
   cleanupAudio() {
     if (this.currentAudio) {
       this.currentAudio.pause();
-      this.currentAudio.currentTime = 0;
+      this.currentAudio.src = ''; // Wichtig für Speicherfreigabe
+      this.currentAudio.removeAttribute('src');
+      this.currentAudio.load();
       this.currentAudio = null;
     }
     this.isPlaying = false;
@@ -130,13 +190,19 @@ class AudioManager {
   fadeIn(duration) {
     if (!this.currentAudio) return;
 
+    // Bestehenden Fade-Effekt abbrechen
+    if (this.fadeInterval) {
+      clearInterval(this.fadeInterval);
+      this.fadeInterval = null;
+    }
+
     const steps = 50;
     const stepTime = duration / steps;
     const volumeStep = this.volume / steps;
     let currentStep = 0;
 
     this.fadeInterval = setInterval(() => {
-      if (currentStep >= steps || !this.currentAudio) {
+      if (!this.currentAudio || currentStep >= steps) {
         if (this.fadeInterval) {
           clearInterval(this.fadeInterval);
           this.fadeInterval = null;
@@ -163,13 +229,20 @@ class AudioManager {
       return;
     }
 
+    // Bestehenden Fade-Effekt abbrechen
+    if (this.fadeInterval) {
+      clearInterval(this.fadeInterval);
+      this.fadeInterval = null;
+    }
+
     const steps = 50;
     const stepTime = duration / steps;
-    const volumeStep = this.currentAudio.volume / steps;
+    const startVolume = this.currentAudio.volume;
+    const volumeStep = startVolume / steps;
     let currentStep = 0;
 
     this.fadeInterval = setInterval(() => {
-      if (currentStep >= steps || !this.currentAudio) {
+      if (!this.currentAudio || currentStep >= steps) {
         if (this.fadeInterval) {
           clearInterval(this.fadeInterval);
           this.fadeInterval = null;
@@ -178,7 +251,7 @@ class AudioManager {
         return;
       }
 
-      this.currentAudio.volume = Math.max(0, this.currentAudio.volume - volumeStep);
+      this.currentAudio.volume = Math.max(0, startVolume - (volumeStep * currentStep));
       currentStep++;
     }, stepTime);
   }
