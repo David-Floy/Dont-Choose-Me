@@ -6,7 +6,7 @@ import audioManager from '../utils/AudioManager';
  * @param {number} props.volume - Aktuelle Lautstärke (0 bis 1)
  * @param {function} props.onChange - Callback für Lautstärkeänderungen
  */
-function VolumeControl({ volume = 0.7, onChange }) {
+function VolumeControl({ volume = 0.03, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const [audioStatus, setAudioStatus] = useState(audioManager.getStatus());
 
@@ -32,14 +32,17 @@ function VolumeControl({ volume = 0.7, onChange }) {
     return '🔊';
   };
 
+  // Lautstärke als Prozentwert für den Slider
+  const sliderValue = Math.round(volume * 100);
+
   const handleSliderChange = (e) => {
-    const newVolume = parseFloat(e.target.value);
+    const newVolume = parseInt(e.target.value, 10) / 100;
     onChange(newVolume);
     audioManager.setVolume(newVolume);
   };
 
   const handleMuteToggle = () => {
-    const newVolume = volume > 0 ? 0 : 0.7;
+    const newVolume = volume > 0 ? 0 : 0.03;
     onChange(newVolume);
     audioManager.setVolume(newVolume);
   };
@@ -60,7 +63,7 @@ function VolumeControl({ volume = 0.7, onChange }) {
       alignItems: 'flex-end',
       gap: window.innerWidth < 768 ? '8px' : '10px'
     }}>
-      {/* Horizontaler Slider */}
+      {/* Slider Container */}
       {isOpen && (
         <div style={{
           background: 'rgba(0,0,0,0.9)',
@@ -116,21 +119,21 @@ function VolumeControl({ volume = 0.7, onChange }) {
               fontWeight: 'bold',
               minWidth: window.innerWidth < 768 ? '30px' : '35px'
             }}>
-              {Math.round(volume * 100)}%
+              {sliderValue}%
             </span>
 
             <input
               type="range"
               min="0"
-              max="1"
-              step="0.05"
-              value={volume}
+              max="100"
+              step="1"
+              value={sliderValue}
               onChange={handleSliderChange}
               style={{
                 flex: 1,
                 height: '6px',
                 borderRadius: '3px',
-                background: `linear-gradient(to right, #007bff 0%, #007bff ${volume * 100}%, #ddd ${volume * 100}%, #ddd 100%)`,
+                background: `linear-gradient(to right, #007bff 0%, #007bff ${sliderValue}%, #ddd ${sliderValue}%, #ddd 100%)`,
                 outline: 'none',
                 cursor: 'pointer',
                 WebkitAppearance: 'none',

@@ -93,16 +93,20 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
           const player = game.players.find(p => p.id === v.playerId);
           return player?.name === playerName;
         });
-        // Storyteller gets special voting phase for observation
         if (storyteller?.name === playerName) {
-          newPhase = 'voteWatch'; // New phase for storyteller
+          newPhase = 'voteWatch';
         } else if (hasVoted) {
-          newPhase = 'waitingAfterVote'; // New phase for players who voted
+          newPhase = 'waitingAfterVote';
         } else {
           newPhase = 'vote';
         }
       } else if (game.phase === 'reveal') {
         newPhase = 'reveal';
+      }
+
+      // Phasenwechsel-Sound abspielen
+      if (phase !== newPhase) {
+        audioManager.playEffect('/sounds/phase-change.mp3');
       }
 
       setPhase(newPhase);
@@ -195,7 +199,11 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Hint successfully given');
+        // Storyteller-Sound nur für Erzähler abspielen
+        const storyteller = game?.players?.[game?.storytellerIndex];
+        if (storyteller?.name === playerName) {
+          audioManager.playEffect('/sounds/storyteller.mp3');
+        }
         setSelectedCard(null);
         setHint('');
       } else {
