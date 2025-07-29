@@ -1219,13 +1219,15 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: window.innerWidth < 480
+            ? '1fr'
+            : 'repeat(2, 1fr)', // Immer 2 Karten pro Zeile
           gap: '12px',
           padding: '15px',
           background: 'rgba(255,255,255,0.1)',
           borderRadius: '12px',
           backdropFilter: 'blur(10px)',
-          maxWidth: '1000px',
+          maxWidth: '900px', // Begrenzte Breite für bessere Lesbarkeit
           margin: '0 auto'
         }}>
           {mixedCards && mixedCards.length > 0 ? mixedCards.map(({ cardId }) => {
@@ -1245,12 +1247,15 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
             return (
               <div key={cardId} style={{
-                position: 'relative'
+                position: 'relative',
+                width: '100%', // Sicherstellen, dass jede Karte die volle Breite des Grid-Elements einnimmt
+                boxSizing: 'border-box',
+                padding: '8px'
               }}>
                 {isMyCard && (
                   <div style={{
                     position: 'absolute',
-                    top: '-8px',
+                    top: '0px',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     background: '#28a745',
@@ -1274,7 +1279,10 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
                     opacity: isMyCard ? 0.7 : 1,
                     border: isMyCard ? '3px solid #28a745' : '2px solid rgba(255,255,255,0.3)',
                     borderRadius: '12px',
-                    transition: 'all 0.3s ease'
+                    transition: 'all 0.3s ease',
+                    width: '100%', // Volle Breite nutzen
+                    maxWidth: '350px', // Maximale Breite begrenzen
+                    margin: '0 auto' // Zentrieren innerhalb des Containers
                   }}
                 />
               </div>
