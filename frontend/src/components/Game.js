@@ -3,12 +3,12 @@ import Card from './Card';
 import VolumeControl from './VolumeControl';
 import audioManager from '../utils/AudioManager';
 import { renderVotePhase } from './VotePhase';
-import { renderGameEndPhase } from './GameEndPhase';
+import { renderGameEndPhase } from './FinishPhase';
 import { renderVoteWatchPhase } from './VoteWatchPhase';
-import { renderWaitingAfterVotePhase } from './WaitingAfterVotePhase';
-import { renderGiveHintPhase } from './GiveHintPhase';
+import { renderWaitingAfterVotePhase } from './WaitingAfterVote';
+import { renderGiveHintPhase } from './ErzaehlerPhase';
+import { renderChooseCardPhase } from './ChoosePhase';
 import { renderWaitingPhase } from './WaitingPhase';
-import { renderChooseCardPhase } from './ChooseCardPhase';
 const API_BASE = '/api';
 
 /**
