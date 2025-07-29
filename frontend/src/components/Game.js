@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import Card from './Card';
 import VolumeControl from './VolumeControl';
 import audioManager from '../utils/AudioManager';
+import './Game.css'; // CSS-Import
 
 const API_BASE = '/api';
 
@@ -69,101 +70,27 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
    * Renders the permanent scoreboard
    */
   const renderScoreboard = () => (
-    <div style={{
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      border: 'none',
-      borderRadius: '16px',
-      padding: window.innerWidth < 768 ? '15px' : '20px',
-      marginBottom: '20px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-      color: 'white'
-    }}>
-      <h4 style={{
-        margin: '0 0 15px 0',
-        textAlign: 'center',
-        fontSize: 'clamp(18px, 4vw, 22px)',
-        textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-      }}>
+    <div className="scoreboard-container">
+      <h4 className="scoreboard-title">
         🏆 Aktuelle Punkte
       </h4>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: window.innerWidth < 480
-          ? '1fr'
-          : window.innerWidth < 768
-            ? 'repeat(2, 1fr)'
-            : 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: window.innerWidth < 768 ? '8px' : '12px'
-      }}>
+      <div className="scoreboard-grid">
         {game?.players?.map(p => {
           const isCurrentPlayer = p.name === playerName;
           const isStoryteller = p.name === game?.players?.[game?.storytellerIndex]?.name;
 
           return (
-          <div key={p.id} style={{
-            textAlign: 'center',
-            padding: window.innerWidth < 768 ? '12px' : '16px',
-            background: isStoryteller
-              ? 'linear-gradient(135deg, #ffd700, #ffed4a)'
-              : isCurrentPlayer
-                ? 'linear-gradient(135deg, #4facfe, #00f2fe)'
-                : 'rgba(255,255,255,0.2)',
-            borderRadius: '12px',
-            border: isCurrentPlayer
-              ? '3px solid #00f2fe'
-              : isStoryteller
-                ? '3px solid #ffd700'
-                : '2px solid rgba(255,255,255,0.3)',
-            color: (isStoryteller || isCurrentPlayer) ? '#333' : 'white',
-            backdropFilter: 'blur(10px)',
-            boxShadow: isCurrentPlayer
-              ? '0 4px 16px rgba(0,242,254,0.4)'
-              : '0 4px 12px rgba(0,0,0,0.2)',
-            transition: 'all 0.3s ease',
-            position: 'relative',
-            overflow: 'visible'
-          }}>
+          <div key={p.id} className={`scoreboard-player ${isCurrentPlayer ? 'current-player' : ''} ${isStoryteller ? 'storyteller' : ''}`}>
             {/* Fancy Umrandung für den aktuellen Spieler */}
             {isCurrentPlayer && (
-              <div style={{
-                position: 'absolute',
-                top: '-12px',
-                left: '0',
-                right: '0',
-                textAlign: 'center',
-                fontSize: 'clamp(12px, 2.5vw, 14px)',
-                fontWeight: 'bold',
-                color: '#333',
-                background: '#4facfe',
-                padding: '4px 10px',
-                borderRadius: '20px',
-                margin: '0 auto',
-                width: 'fit-content',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                border: '2px solid white',
-                whiteSpace: 'nowrap',
-                zIndex: 2
-              }}>
+              <div className="current-player-badge">
                 🫵 You 🫵
               </div>
             )}
-            <div style={{
-              fontWeight: 'bold',
-              fontSize: 'clamp(12px, 3vw, 16px)',
-              marginBottom: '6px',
-              wordBreak: 'break-word',
-              marginTop: isCurrentPlayer ? '8px' : '0'
-            }}>{p.name}</div>
-            <div style={{
-              fontSize: 'clamp(18px, 5vw, 24px)',
-              fontWeight: 'bold',
-              marginBottom: '4px'
-            }}>{p.points}</div>
+            <div className="player-name">{p.name}</div>
+            <div className="player-points">{p.points}</div>
             {isStoryteller && (
-              <div style={{
-                fontSize: 'clamp(10px, 2vw, 12px)',
-                fontWeight: 'bold'
-              }}>🎭 Erzähler</div>
+              <div className="storyteller-indicator">🎭 Erzähler</div>
             )}
           </div>
         )})}
@@ -206,51 +133,22 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
    * Renders the card selection phase
    */
   const renderChooseCardPhase = () => (
-    <div style={{
-      padding: '15px',
-      background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      borderRadius: '16px',
-      color: 'white',
-      textAlign: 'center'
-    }}>
-      <h3 style={{
-        margin: '0 0 10px 0',
-        fontSize: 'clamp(20px, 5vw, 24px)',
-        textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-      }}>
+    <div className="choose-card-phase">
+      <h3 className="choose-card-title">
         💭 Wähle deine Karte
       </h3>
-      <div style={{
-        background: 'rgba(255,255,255,0.15)',
-        padding: '12px',
-        borderRadius: '12px',
-        marginBottom: '15px',
-        backdropFilter: 'blur(10px)'
-      }}>
-        <p style={{
-          fontSize: 'clamp(14px, 3.5vw, 18px)',
-          margin: '0 0 8px 0',
-          wordBreak: 'break-word'
-        }}>
-          Hinweis des Erzählers: <span style={{color:'#ffd700', fontWeight: 'bold', fontSize: 'clamp(16px, 4vw, 20px)'}}>{game?.hint}</span>
+      <div className="choose-card-info">
+        <p className="hint-text">
+          Hinweis des Erzählers: <span className="hint-highlight">{game?.hint}</span>
         </p>
-        <p style={{
-          fontSize: 'clamp(12px, 2.5vw, 14px)',
-          opacity: 0.9,
-          margin: 0
-        }}>
+        <p className="selection-progress">
           Spieler haben bereits gewählt: {game?.selectedCards?.length || 0} / {game?.players?.length || 0}
         </p>
       </div>
 
       {hand.length === 0 ? (
-        <div style={{
-          background: 'rgba(220,53,69,0.9)',
-          padding: '20px',
-          borderRadius: '12px',
-          textAlign: 'center'
-        }}>
-          <p style={{color: 'white', fontSize: 'clamp(16px, 4vw, 18px)', margin: '0 0 15px 0'}}>
+        <div className="no-cards-warning">
+          <p className="no-cards-text">
             ❌ Keine Karten in der Hand gefunden!
           </p>
           <button
@@ -270,113 +168,39 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
                 console.error('Error refreshing game state:', error);
               }
             }}
-            style={{
-              padding: '10px 20px',
-              fontSize: 'clamp(14px, 3vw, 16px)',
-              backgroundColor: '#fff',
-              color: '#dc3545',
-              border: 'none',
-              borderRadius: '25px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
+            className="refresh-hand-button"
           >
             🔄 Hand neu laden
           </button>
         </div>
       ) : (
-        <div style={{
-          padding: '15px',
-          background: 'rgba(255,255,255,0.1)',
-          borderRadius: '12px',
-          backdropFilter: 'blur(10px)'
-        }}>
-          {/* Responsive Grid Layout für Kartenauswahl */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: window.innerWidth < 480
-              ? '1fr'
-              : window.innerWidth < 768
-                ? 'repeat(2, 1fr)'
-                : 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: window.innerWidth < 768 ? '15px' : '20px',
-            maxWidth: '1000px',
-            margin: '0 auto'
-          }}>
-            {hand.map(card => (
-              <div key={card.id} style={{
-                position: 'relative',
-                display: 'flex',
-                justifyContent: 'center'
-              }}>
-                {selectedCard === card.id && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#28a745',
-                    color: 'white',
-                    padding: '4px 10px',
-                    borderRadius: '12px',
-                    fontSize: 'clamp(10px, 2vw, 12px)',
-                    fontWeight: 'bold',
-                    zIndex: 1,
-                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    ✅ Gewählt
-                  </div>
-                )}
-                <Card
-                  card={card}
-                  onClick={() => handleChooseCard(card.id)}
-                  selected={selectedCard === card.id}
-                  style={{
-                    transform: selectedCard === card.id ? 'scale(1.02)' : 'scale(1)',
-                    boxShadow: selectedCard === card.id
-                      ? '0 8px 24px rgba(40,167,69,0.4)'
-                      : '0 4px 12px rgba(0,0,0,0.2)',
-                    border: selectedCard === card.id ? '3px solid #28a745' : '2px solid rgba(255,255,255,0.3)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    maxWidth: '100%',
-                    width: '100%'
-                  }}
-                />
-                {/* Bestätigungsbutton für gewählte Karte */}
-                {selectedCard === card.id && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '-15px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    marginTop: '10px'
-                  }}>
-                    <button
-                      onClick={() => handleChooseCard(card.id)}
-                      style={{
-                        padding: '5px 15px',
-                        background: '#28a745',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontSize: 'clamp(10px, 2vw, 12px)',
-                        fontWeight: 'bold',
-                        boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                      }}
-                    >
-                      <span>Bestätigen</span> ✓
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+        <div className="card-selection-grid">
+          {hand.map(card => (
+            <div key={card.id} className="card-selection-item">
+              {selectedCard === card.id && (
+                <div className="card-selected-indicator">
+                  ✅ Gewählt
+                </div>
+              )}
+              <Card
+                card={card}
+                onClick={() => handleChooseCard(card.id)}
+                selected={selectedCard === card.id}
+                className="selectable-card"
+              />
+              {/* Bestätigungsbutton für gewählte Karte */}
+              {selectedCard === card.id && (
+                <div className="confirm-selection-button-container">
+                  <button
+                    onClick={() => handleChooseCard(card.id)}
+                    className="confirm-selection-button"
+                  >
+                    <span>Bestätigen</span> ✓
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -810,33 +634,26 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
     const isStoryteller = game?.players?.[game?.storytellerIndex]?.name === playerName;
 
     return (
-      <div>
+      <div className="waiting-phase">
         {game?.hint && game.selectedCards?.length < game.players?.length ? (
-          <div>
-            <div style={{
-              background: 'rgba(255,255,255,0.15)',
-              padding: '15px',
-              borderRadius: '12px',
-              marginBottom: '20px',
-              backdropFilter: 'blur(10px)',
-              textAlign: 'center'
-            }}>
-              <p style={{ fontSize: '18px', margin: '0 0 10px 0' }}>
-                Hinweis: <span style={{color:'#ffd700', fontWeight: 'bold', fontSize: '20px'}}>{game.hint}</span>
+          <div className="hint-progress-container">
+            <div className="hint-progress">
+              <p className="hint-text">
+                Hinweis: <span className="hint-highlight">{game.hint}</span>
               </p>
-              <p style={{ fontSize: '14px', opacity: 0.9, margin: 0 }}>
+              <p className="selection-progress">
                 Warte, bis alle Spieler ihre Karten ausgewählt haben...
               </p>
-              <p style={{ fontSize: '14px', fontWeight: 'bold', margin: '5px 0 0 0' }}>
+              <p className="selection-progress">
                 Fortschritt: {game.selectedCards.length} / {game.players.length} Karten gewählt
               </p>
             </div>
 
             {/* Storyteller sees already placed cards */}
             {isStoryteller && game.selectedCards.length > 1 && (
-              <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ textAlign: 'center', marginBottom: '15px' }}>Von anderen Spielern gelegte Karten:</h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center' }}>
+              <div className="placed-cards-preview">
+                <h4 className="preview-title">Von anderen Spielern gelegte Karten:</h4>
+                <div className="preview-grid">
                   {game.selectedCards.slice(1).map((selectedCard, index) => {
                     const player = game.players.find(p => p.id === selectedCard.playerId);
                     const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
@@ -851,16 +668,9 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
                     }
 
                     return (
-                      <div key={`${selectedCard.cardId}-${index}`} style={{
-                        border: '2px solid #28a745',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        background: '#f8f9fa',
-                        textAlign: 'center',
-                        minWidth: '180px'
-                      }}>
+                      <div key={`${selectedCard.cardId}-${index}`} className="preview-card">
                         <Card card={card} />
-                        <div style={{ marginTop: '8px', fontSize: '14px', fontWeight: 'bold' }}>
+                        <div className="player-name-overlay">
                           {player ? player.name : 'Unbekannt'}
                         </div>
                       </div>
@@ -872,29 +682,16 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
             {/* Show player's hand during waiting */}
             {hand.length > 0 && (
-              <div style={{ marginTop: '20px' }}>
-                <h4 style={{ textAlign: 'center', marginBottom: '15px', color: 'white' }}>
+              <div className="player-hand-preview">
+                <h4 className="hand-preview-title">
                   📋 Deine verbleibenden Karten:
                 </h4>
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                  justifyContent: 'center',
-                  padding: '15px',
-                  background: 'rgba(255,255,255,0.1)',
-                  borderRadius: '12px',
-                  backdropFilter: 'blur(10px)'
-                }}>
+                <div className="hand-preview-grid">
                   {hand.map(card => (
-                    <div key={card.id} style={{ opacity: 0.8 }}>
+                    <div key={card.id} className="hand-card">
                       <Card
                         card={card}
-                        style={{
-                          transform: 'scale(0.9)',
-                          border: '2px solid rgba(255,255,255,0.3)',
-                          borderRadius: '8px'
-                        }}
+                        className="hand-card-inner"
                       />
                     </div>
                   ))}
@@ -903,41 +700,28 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
             )}
           </div>
         ) : game?.phase === 'voting' && isStoryteller ? (
-          <div>
+          <div className="voting-info">
             <p>Die Abstimmung läuft...</p>
             <p>Du kannst nicht abstimmen, aber beobachtest das Geschehen.</p>
           </div>
         ) : (
-          <div>
-            <p style={{ textAlign: 'center', fontSize: '18px', marginBottom: '20px' }}>
+          <div className="waiting-message">
+            <p>
               Bitte warten...
             </p>
 
             {/* Show player's hand during initial waiting */}
             {hand.length > 0 && (
-              <div>
-                <h4 style={{ textAlign: 'center', marginBottom: '15px', color: 'white' }}>
+              <div className="player-hand-preview">
+                <h4 className="hand-preview-title">
                   📋 Deine Karten:
                 </h4>
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                  justifyContent: 'center',
-                  padding: '15px',
-                  background: 'rgba(255,255,255,0.1)',
-                  borderRadius: '12px',
-                  backdropFilter: 'blur(10px)'
-                }}>
+                <div className="hand-preview-grid">
                   {hand.map(card => (
-                    <div key={card.id} style={{ opacity: 0.8 }}>
+                    <div key={card.id} className="hand-card">
                       <Card
                         card={card}
-                        style={{
-                          transform: 'scale(0.9)',
-                          border: '2px solid rgba(255,255,255,0.3)',
-                          borderRadius: '8px'
-                        }}
+                        className="hand-card-inner"
                       />
                     </div>
                   ))}
@@ -954,90 +738,32 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
    * Renders the hint-giving phase for the storyteller
    */
   const renderGiveHintPhase = () => (
-    <div style={{
-      padding: '15px',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      borderRadius: '16px',
-      color: 'white',
-      textAlign: 'center'
-    }}>
-      <h3 style={{
-        margin: '0 0 15px 0',
-        fontSize: 'clamp(20px, 5vw, 28px)',
-        textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-      }}>
+    <div className="give-hint-phase">
+      <h3 className="give-hint-title">
         🎭 Du bist der Erzähler!
       </h3>
-      <p style={{
-        fontSize: 'clamp(14px, 3vw, 18px)',
-        marginBottom: '20px',
-        opacity: 0.9,
-        padding: '0 10px'
-      }}>
+      <p className="give-hint-description">
         Wähle eine Karte aus deiner Hand und gib einen kreativen Hinweis
       </p>
 
       {/* Validation Status */}
-      <div style={{
-        background: 'rgba(255,255,255,0.1)',
-        padding: '12px',
-        borderRadius: '12px',
-        marginBottom: '15px',
-        backdropFilter: 'blur(10px)'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '15px',
-          flexWrap: 'wrap',
-          fontSize: 'clamp(12px, 2.5vw, 14px)'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            color: selectedCard ? '#28a745' : '#ffc107'
-          }}>
-            {selectedCard ? '✅' : '⚠️'} Karte: {selectedCard ? 'Ausgewählt' : 'Keine ausgewählt'}
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            color: hint.trim().length >= 2 ? '#28a745' : '#ffc107'
-          }}>
-            {hint.trim().length >= 2 ? '✅' : '⚠️'} Hinweis: {hint.trim().length}/100 Zeichen
-          </div>
+      <div className="validation-status">
+        <div className={`status-item ${selectedCard ? 'valid' : 'invalid'}`}>
+          {selectedCard ? '✅' : '⚠️'} Karte: {selectedCard ? 'Ausgewählt' : 'Keine ausgewählt'}
+        </div>
+        <div className={`status-item ${hint.trim().length >= 2 ? 'valid' : 'invalid'}`}>
+          {hint.trim().length >= 2 ? '✅' : '⚠️'} Hinweis: {hint.trim().length}/100 Zeichen
         </div>
       </div>
 
       {/* Hinweis-Eingabe mit Button - Mobile optimiert */}
-      <div style={{
-        display: 'flex',//
-        justifyContent: 'center',
-        gap: '10px',
-        marginBottom: '20px',
-        flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-        alignItems: window.innerWidth < 768 ? 'stretch' : 'center'
-      }}>
+      <div className="hint-input-container">
         <input
           value={hint}
           onChange={e => setHint(e.target.value)}
           placeholder="Gib deinen Hinweis ein... (min. 2 Zeichen)"
           maxLength="100"
-          style={{
-            padding: '12px 16px',
-            fontSize: 'clamp(14px, 3vw, 16px)',
-            border: 'none',
-            borderRadius: '25px',
-            width: window.innerWidth < 768 ? '100%' : '280px',
-            maxWidth: '100%',
-            outline: 'none',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-            textAlign: 'center',
-            background: hint.trim().length >= 2 ? '#e8f5e8' : '#fff3cd',
-            boxSizing: 'border-box'
-          }}
+          className="hint-input"
           onKeyPress={(e) => {
             if (e.key === 'Enter' && selectedCard && hint.trim().length >= 2) {
               handleGiveHint();
@@ -1047,102 +773,30 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
         <button
           onClick={handleGiveHint}
           disabled={!selectedCard || hint.trim().length < 2}
-          style={{
-            padding: '12px 20px',
-            fontSize: 'clamp(14px, 3vw, 16px)',
-            fontWeight: 'bold',
-            backgroundColor: (!selectedCard || hint.trim().length < 2) ? '#6c757d' : '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '25px',
-            cursor: (!selectedCard || hint.trim().length < 2) ? 'not-allowed' : 'pointer',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-            transition: 'all 0.3s ease',
-            minWidth: window.innerWidth < 768 ? 'auto' : '120px',
-            opacity: (!selectedCard || hint.trim().length < 2) ? 0.6 : 1,
-            whiteSpace: 'nowrap'
-          }}
-          onMouseOver={(e) => {
-            if (!e.target.disabled) {
-              e.target.style.backgroundColor = '#218838';
-              e.target.style.transform = 'translateY(-2px)';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!e.target.disabled) {
-              e.target.style.backgroundColor = '#28a745';
-              e.target.style.transform = 'translateY(0)';
-            }
-          }}
+          className="give-hint-button"
         >
           {!selectedCard ? 'Karte wählen' : hint.trim().length < 2 ? 'Hinweis eingeben' : 'Hinweis geben'}
         </button>
       </div>
 
       {/* Informationstext */}
-      <div style={{
-        background: 'rgba(255,255,255,0.15)',
-        padding: '10px',
-        borderRadius: '12px',
-        marginBottom: '15px',
-        backdropFilter: 'blur(10px)',
-        fontSize: 'clamp(12px, 2.5vw, 14px)',
-        opacity: 0.9
-      }}>
+      <div className="hint-tip">
         💡 <strong>Tipp:</strong> Gib einen kreativen Hinweis, der nicht zu offensichtlich, aber auch nicht zu schwer ist.
         Andere Spieler müssen deine Karte unter allen eingereichten Karten erraten!
       </div>
 
       {/* Kartenauswahl - Responsive Grid Layout */}
-      <div style={{
-        padding: '15px',
-        background: 'rgba(255,255,255,0.1)',
-        borderRadius: '12px',
-        backdropFilter: 'blur(10px)'
-      }}>
+      <div className="hand-card-selection">
         {hand.length === 0 ? (
-          <div style={{
-            color: '#ffc107',
-            fontSize: 'clamp(16px, 4vw, 18px)',
-            padding: '20px',
-            textAlign: 'center'
-          }}>
+          <div className="no-cards-warning">
             ⚠️ Keine Karten in der Hand! Lade die Seite neu.
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: window.innerWidth < 480
-              ? '1fr'
-              : window.innerWidth < 768
-                ? 'repeat(2, 1fr)'
-                : 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: window.innerWidth < 768 ? '15px' : '20px',
-            maxWidth: '1000px',
-            margin: '0 auto'
-          }}>
+          <div className="card-selection-grid">
             {hand.map(card => (
-              <div key={card.id} style={{
-                position: 'relative',
-                display: 'flex',
-                justifyContent: 'center'
-              }}>
+              <div key={card.id} className="card-selection-item">
                 {selectedCard === card.id && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#ffd700',
-                    color: '#333',
-                    padding: '4px 10px',
-                    borderRadius: '12px',
-                    fontSize: 'clamp(10px, 2vw, 12px)',
-                    fontWeight: 'bold',
-                    zIndex: 1,
-                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
-                    whiteSpace: 'nowrap'
-                  }}>
+                  <div className="card-selected-indicator">
                     ✨ Ausgewählt
                   </div>
                 )}
@@ -1153,17 +807,7 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
                     console.log(`Selected card: ${card.id} (${card.title})`);
                   }}
                   selected={selectedCard === card.id}
-                  style={{
-                    transform: selectedCard === card.id ? 'scale(1.02)' : 'scale(1)',
-                    boxShadow: selectedCard === card.id
-                      ? '0 8px 24px rgba(255,215,0,0.4)'
-                      : '0 4px 12px rgba(0,0,0,0.2)',
-                    border: selectedCard === card.id ? '3px solid #ffd700' : '2px solid rgba(255,255,255,0.3)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    maxWidth: '100%',
-                    width: '100%'
-                  }}
+                  className="selectable-card"
                 />
               </div>
             ))}
@@ -1184,52 +828,24 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
     });
 
     return (
-      <div style={{
-        padding: '15px',
-        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        borderRadius: '16px',
-        color: 'white',
-        textAlign: 'center'
-      }}>
-        <h3 style={{
-          margin: '0 0 15px 0',
-          fontSize: 'clamp(20px, 5vw, 24px)',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-        }}>
+      <div className="vote-phase">
+        <h3 className="vote-title">
           🗳️ Wähle die Karte des Erzählers
         </h3>
 
-        <div style={{
-          background: 'rgba(255,255,255,0.15)',
-          padding: '15px',
-          borderRadius: '12px',
-          marginBottom: '20px',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <p style={{ fontSize: 'clamp(14px, 3.5vw, 18px)', margin: '0 0 10px 0' }}>
-            Hinweis: <span style={{color:'#ffd700', fontWeight: 'bold', fontSize: 'clamp(16px, 4vw, 20px)'}}>{game?.hint}</span>
+        <div className="vote-info">
+          <p className="hint-text">
+            Hinweis: <span className="hint-highlight">{game?.hint}</span>
           </p>
-          <p style={{ fontSize: 'clamp(12px, 3vw, 14px)', opacity: 0.9, margin: 0 }}>
+          <p className="vote-description">
             Stimme für die Karte ab, von der du glaubst, dass sie vom Erzähler stammt.
           </p>
-          <p style={{ fontSize: 'clamp(12px, 3vw, 14px)', opacity: 0.8, marginTop: '8px' }}>
+          <p className="vote-warning">
             <strong>Achtung:</strong> Du kannst nicht für deine eigene Karte stimmen!
           </p>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: window.innerWidth < 480
-            ? '1fr'
-            : 'repeat(2, 1fr)', // Immer 2 Karten pro Zeile
-          gap: '12px',
-          padding: '15px',
-          background: 'rgba(255,255,255,0.1)',
-          borderRadius: '12px',
-          backdropFilter: 'blur(10px)',
-          maxWidth: '900px', // Begrenzte Breite für bessere Lesbarkeit
-          margin: '0 auto'
-        }}>
+        <div className="card-selection-grid">
           {mixedCards && mixedCards.length > 0 ? mixedCards.map(({ cardId }) => {
             const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
             let card = combinedCards.find(c => c.id === cardId);
@@ -1246,87 +862,20 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
             const isMyCard = mySelectedCard && mySelectedCard.cardId === cardId;
 
             return (
-              <div key={cardId} style={{
-                position: 'relative',
-                width: '100%', // Sicherstellen, dass jede Karte die volle Breite des Grid-Elements einnimmt
-                boxSizing: 'border-box',
-                padding: '8px'
-              }}>
+              <div key={cardId} className="card-selection-item">
                 {isMyCard && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '0px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#28a745',
-                    color: 'white',
-                    padding: '4px 10px',
-                    borderRadius: '12px',
-                    fontSize: 'clamp(10px, 2vw, 12px)',
-                    fontWeight: 'bold',
-                    zIndex: 1,
-                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
-                    whiteSpace: 'nowrap'
-                  }}>
+                  <div className="my-card-indicator">
                     🏷️ Deine Karte
                   </div>
                 )}
                 <Card
                   card={card}
                   onClick={() => !isMyCard && handleVote(cardId)}
-                  style={{
-                    cursor: isMyCard ? 'not-allowed' : 'pointer',
-                    opacity: isMyCard ? 0.7 : 1,
-                    border: isMyCard ? '3px solid #28a745' : '2px solid rgba(255,255,255,0.3)',
-                    borderRadius: '12px',
-                    transition: 'all 0.3s ease',
-                    width: '100%', // Volle Breite nutzen
-                    maxWidth: '350px', // Maximale Breite begrenzen
-                    margin: '0 auto' // Zentrieren innerhalb des Containers
-                  }}
+                  className={`votable-card${isMyCard ? ' my-selected-card' : ''}`}
                 />
               </div>
             );
-          }) : (
-            <div style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              padding: '30px',
-              color: 'white',
-              fontSize: '18px'
-            }}>
-              <p>Keine Karten zum Abstimmen verfügbar!</p>
-              <button
-                onClick={async () => {
-                  try {
-                    const response = await fetch(`${API_BASE}/game`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ gameId, action: 'getState', playerName })
-                    });
-                    if (response.ok) {
-                      const data = await response.json();
-                      setGame(data.game);
-                      setMixedCards(data.game.mixedCards || []);
-                    }
-                  } catch (error) {
-                    console.error('Error refreshing game state:', error);
-                  }
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'rgba(255,255,255,0.2)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white',
-                  cursor: 'pointer',
-                  marginTop: '10px'
-                }}
-              >
-                🔄 Spieldaten aktualisieren
-              </button>
-            </div>
-          )}
+          }) : null}
         </div>
       </div>
     );
@@ -1336,98 +885,42 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
    * Renders the vote watch phase for the storyteller
    */
   const renderVoteWatchPhase = () => {
+    // mySelectedCard analog zu renderVotePhase definieren
+    const mySelectedCard = game?.selectedCards?.find(sc => {
+      const player = game.players.find(p => p.id === sc.playerId);
+      return player?.name === playerName;
+    });
+
     return (
-      <div style={{
-        padding: '15px',
-        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        borderRadius: '16px',
-        color: 'white',
-        textAlign: 'center'
-      }}>
-        <h3 style={{
-          margin: '0 0 15px 0',
-          fontSize: 'clamp(20px, 5vw, 24px)',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-        }}>
+      <div className="vote-watch-phase">
+        <h3 className="vote-watch-title">
           🎭 Als Erzähler siehst du zu
         </h3>
 
-        <div style={{
-          background: 'rgba(255,255,255,0.15)',
-          padding: '15px',
-          borderRadius: '12px',
-          marginBottom: '20px',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <p style={{ fontSize: 'clamp(14px, 3.5vw, 18px)', margin: '0 0 10px 0' }}>
-            Dein Hinweis: <span style={{color:'#ffd700', fontWeight: 'bold', fontSize: 'clamp(16px, 4vw, 20px)'}}>{game?.hint}</span>
+        <div className="vote-watch-info">
+          <p className="hint-text">
+            Dein Hinweis: <span className="hint-highlight">{game?.hint}</span>
           </p>
-          <p style={{ fontSize: 'clamp(14px, 3vw, 16px)', opacity: 0.9, margin: '0' }}>
+          <p className="vote-watch-description">
             Die anderen Spieler stimmen jetzt ab, welche Karte deine sein könnte.
           </p>
         </div>
 
         {/* Fortschritts-Anzeige */}
-        <div style={{
-          background: 'rgba(255,255,255,0.1)',
-          padding: '12px 16px',
-          borderRadius: '12px',
-          marginBottom: '20px'
-        }}>
-          <p style={{
-            fontSize: 'clamp(14px, 3vw, 16px)',
-            fontWeight: 'bold',
-            margin: '0 0 10px 0'
-          }}>
+        <div className="progress-container">
+          <p className="progress-title">
             🗳️ Abstimmungs-Fortschritt:
           </p>
-          <div style={{
-            position: 'relative',
-            height: '24px',
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: '12px',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              height: '100%',
-              width: `${Math.round((game?.votes?.length / (game?.players?.length - 1)) * 100) || 0}%`,
-              background: 'linear-gradient(to right, #28a745, #34ce57)',
-              transition: 'width 0.5s ease'
-            }}/>
-            <div style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 'clamp(12px, 2.5vw, 14px)',
-              fontWeight: 'bold',
-              color: 'white',
-              textShadow: '0 0 2px rgba(0,0,0,0.5)'
-            }}>
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${Math.round((game?.votes?.length / (game?.players?.length - 1)) * 100) || 0}%` }} />
+            <div className="progress-text">
               {game?.votes?.length || 0} / {(game?.players?.length || 1) - 1} Stimmen
             </div>
           </div>
         </div>
 
         {/* Kartenansicht */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '12px',
-          padding: '15px',
-          background: 'rgba(255,255,255,0.1)',
-          borderRadius: '12px',
-          backdropFilter: 'blur(10px)',
-          maxWidth: '900px',
-          margin: '0 auto'
-        }}>
+        <div className="card-reveal-grid">
           {mixedCards && mixedCards.map(({ cardId }) => {
             const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
             let card = combinedCards.find(c => c.id === cardId);
@@ -1444,108 +937,20 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
             const isMyCard = cardId === game.storytellerCard;
 
             return (
-              <div key={cardId} style={{
-                position: 'relative',
-                display: 'flex',
-                justifyContent: 'center'
-              }}>
+              <div key={cardId} className="card-reveal-item">
                 {isMyCard && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#ffd700',
-                    color: '#333',
-                    padding: '4px 10px',
-                    borderRadius: '12px',
-                    fontSize: 'clamp(10px, 2vw, 12px)',
-                    fontWeight: 'bold',
-                    zIndex: 1,
-                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    🎭 Deine Karte
+                  <div className="my-card-indicator">
+                    🏷️ Deine Karte
                   </div>
                 )}
-
                 <Card
                   card={card}
-                  style={{
-                    transform: isMyCard ? 'scale(1.02)' : 'scale(1)',
-                    opacity: 1,
-                    border: isMyCard
-                      ? '3px solid #ffd700'
-                      : '2px solid rgba(255,255,255,0.3)',
-                    borderRadius: '12px',
-                    transition: 'all 0.3s ease',
-                    boxShadow: isMyCard
-                      ? '0 8px 24px rgba(255,215,0,0.4)'
-                      : '0 4px 8px rgba(0,0,0,0.2)',
-                    maxWidth: '100%',
-                    width: '100%'
-                  }}
+                  onClick={() => !isMyCard && handleVote(cardId)}
+                  className={`votable-card${mySelectedCard && mySelectedCard.cardId === cardId ? ' my-selected-card' : ''}`}
                 />
               </div>
             );
           })}
-        </div>
-
-        {/* Liste der abstimmenden Spieler */}
-        {game?.votes?.length > 0 && (
-          <div style={{
-            marginTop: '20px',
-            background: 'rgba(255,255,255,0.15)',
-            padding: '12px',
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <p style={{
-              fontSize: 'clamp(14px, 3vw, 16px)',
-              margin: '0 0 8px 0',
-              fontWeight: 'bold'
-            }}>
-              📊 Bereits abgestimmt:
-            </p>
-            <div style={{
-              display: 'flex',
-              gap: '6px',
-              justifyContent: 'center',
-              flexWrap: 'wrap'
-            }}>
-              {game.votes.map((vote, index) => {
-                const voter = game.players.find(p => p.id === vote.playerId);
-                return (
-                  <span key={index} style={{
-                    background: 'rgba(255,255,255,0.2)',
-                    padding: '3px 8px',
-                    borderRadius: '8px',
-                    fontSize: 'clamp(10px, 2vw, 12px)',
-                    fontWeight: 'bold'
-                  }}>
-                    ✅ {voter ? voter.name : 'Unbekannt'}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Spielanweisungen für den Erzähler */}
-        <div style={{
-          marginTop: '20px',
-          background: 'rgba(255,255,255,0.05)',
-          padding: '12px',
-          borderRadius: '12px'
-        }}>
-          <p style={{
-            fontSize: 'clamp(12px, 2.5vw, 14px)',
-            opacity: 0.9,
-            fontStyle: 'italic',
-            margin: 0
-          }}>
-            Als Erzähler kannst du nur zusehen. Warte, bis alle abgestimmt haben...
-          </p>
         </div>
       </div>
     );
@@ -1556,51 +961,25 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
    */
   const renderWaitingAfterVotePhase = () => {
     return (
-      <div style={{
-        padding: '15px',
-        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        borderRadius: '16px',
-        color: 'white',
-        textAlign: 'center'
-      }}>
-        <h3 style={{
-          margin: '0 0 15px 0',
-          fontSize: 'clamp(20px, 5vw, 24px)',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-        }}>
+      <div className="waiting-after-vote-phase">
+        <h3 className="waiting-after-vote-title">
           ✅ Abstimmung abgeschlossen
         </h3>
 
-        <div style={{
-          background: 'rgba(255,255,255,0.15)',
-          padding: '15px',
-          borderRadius: '12px',
-          marginBottom: '20px',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <p style={{ fontSize: 'clamp(14px, 3.5vw, 18px)', margin: '0 0 10px 0' }}>
-            Hinweis war: <span style={{color:'#ffd700', fontWeight: 'bold', fontSize: 'clamp(16px, 4vw, 20px)'}}>{game?.hint}</span>
+        <div className="waiting-after-vote-info">
+          <p className="hint-text">
+            Hinweis war: <span className="hint-highlight">{game?.hint}</span>
           </p>
-          <p style={{ fontSize: 'clamp(14px, 3vw, 16px)', opacity: 0.9, margin: '0' }}>
+          <p className="waiting-description">
             Warte, bis alle anderen Spieler abgestimmt haben...
           </p>
-          <p style={{ fontSize: 'clamp(14px, 3vw, 16px)', fontWeight: 'bold', marginTop: '10px' }}>
+          <p className="selection-progress">
             Fortschritt: {game?.votes?.length || 0} / {(game?.players?.length || 1) - 1} Stimmen
           </p>
         </div>
 
         {/* Zeigt die abgegebenen Karten an */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '12px',
-          padding: '15px',
-          background: 'rgba(255,255,255,0.1)',
-          borderRadius: '12px',
-          backdropFilter: 'blur(10px)',
-          maxWidth: '900px',
-          margin: '0 auto'
-        }}>
+        <div className="card-reveal-grid">
           {mixedCards && mixedCards.map(({ cardId }) => {
             const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
             let card = combinedCards.find(c => c.id === cardId);
@@ -1620,27 +999,9 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
             });
 
             return (
-              <div key={cardId} style={{
-                position: 'relative',
-                display: 'flex',
-                justifyContent: 'center'
-              }}>
+              <div key={cardId} className="card-reveal-item">
                 {mySelectedCard && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#28a745',
-                    color: 'white',
-                    padding: '4px 10px',
-                    borderRadius: '12px',
-                    fontSize: 'clamp(10px, 2vw, 12px)',
-                    fontWeight: 'bold',
-                    zIndex: 1,
-                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)',
-                    whiteSpace: 'nowrap'
-                  }}>
+                  <div className="my-card-indicator">
                     🏷️ Deine Karte
                   </div>
                 )}
@@ -1664,32 +1025,15 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
         </div>
 
         {/* Voting-Status */}
-        <div style={{
-          marginTop: '20px',
-          background: 'rgba(255,255,255,0.15)',
-          padding: '12px',
-          borderRadius: '12px',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <p style={{ fontSize: 'clamp(14px, 3vw, 16px)', margin: '0 0 8px 0', fontWeight: 'bold' }}>
+        <div className="voting-status">
+          <p className="voting-status-title">
             📊 Bereits abgestimmt:
           </p>
-          <div style={{
-            display: 'flex',
-            gap: '6px',
-            justifyContent: 'center',
-            flexWrap: 'wrap'
-          }}>
+          <div className="voting-status-list">
             {game?.votes?.map((vote, index) => {
               const voter = game.players.find(p => p.id === vote.playerId);
               return (
-                <span key={index} style={{
-                  background: 'rgba(255,255,255,0.2)',
-                  padding: '3px 8px',
-                  borderRadius: '8px',
-                  fontSize: 'clamp(10px, 2vw, 12px)',
-                  fontWeight: 'bold'
-                }}>
+                <span key={index} className="voter-indicator">
                   ✅ {voter ? voter.name : 'Unbekannt'}
                 </span>
               );
@@ -1706,13 +1050,7 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
   const renderRevealPhase = () => {
     if (!game) {
       return (
-        <div style={{
-          textAlign: 'center',
-          padding: '30px',
-          background: 'rgba(255,255,255,0.1)',
-          borderRadius: '12px',
-          color: 'white'
-        }}>
+        <div className="loading-reveal">
           <h3>Lade Auflösung...</h3>
           <p>Spiel wird geladen...</p>
           <button
@@ -1731,15 +1069,7 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
                 console.error('Error refreshing game state:', error);
               }
             }}
-            style={{
-              padding: '8px 16px',
-              background: 'rgba(255,255,255,0.2)',
-              border: 'none',
-              borderRadius: '8px',
-              color: 'white',
-              cursor: 'pointer',
-              marginTop: '20px'
-            }}
+            className="refresh-game-data-button"
           >
             🔄 Daten aktualisieren
           </button>
@@ -1748,49 +1078,20 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
     }
 
     return (
-      <div style={{
-        padding: '20px',
-        background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
-        borderRadius: '16px',
-        color: 'white',
-        textAlign: 'center'
-      }}>
-        <h3 style={{
-          fontSize: 'clamp(20px, 5vw, 24px)',
-          marginBottom: '15px',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-        }}>
+      <div className="reveal-phase">
+        <h3 className="reveal-title">
           🎯 Auflösung: Wer hat welche Karte gelegt?
         </h3>
 
-        <div style={{
-          background: 'rgba(255,255,255,0.15)',
-          padding: '15px',
-          borderRadius: '12px',
-          marginBottom: '20px',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <p style={{
-            fontSize: 'clamp(16px, 4vw, 18px)',
-            marginBottom: '10px'
-          }}>
-            Hinweis war: <span style={{color:'#ffd700', fontWeight: 'bold', fontSize: 'clamp(18px, 4.5vw, 20px)'}}>{game?.hint}</span>
+        <div className="reveal-info">
+          <p className="hint-text">
+            Hinweis war: <span className="hint-highlight">{game?.hint}</span>
           </p>
         </div>
 
         {/* Karten-Auflösung */}
         {revealInfo && revealInfo.length > 0 ? (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '15px',
-            padding: '20px',
-            background: 'rgba(255,255,255,0.1)',
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)',
-            maxWidth: '1000px',
-            margin: '0 auto 24px auto'
-          }}>
+          <div className="reveal-cards-grid">
             {revealInfo.map(info => {
               const combinedCards = [...allCards, ...(game?.players?.flatMap(p => p.hand) || [])];
               let card = combinedCards.find(c => c.id === info.cardId);
@@ -1804,79 +1105,26 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
               }
 
               return (
-                <div key={info.cardId} style={{
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center'
-                }}>
+                <div key={info.cardId} className="reveal-card-item">
                   {info.isStoryteller && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '-10px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background: '#ffd700',
-                      color: '#333',
-                      padding: '4px 12px',
-                      borderRadius: '12px',
-                      fontSize: 'clamp(12px, 2.5vw, 14px)',
-                      fontWeight: 'bold',
-                      zIndex: 1,
-                      boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-                      whiteSpace: 'nowrap'
-                    }}>
+                    <div className="storyteller-card-indicator">
                       🎭 Erzähler-Karte
                     </div>
                   )}
 
                   <Card
                     card={card}
-                    style={{
-                      border: info.isStoryteller
-                        ? '3px solid #ffd700'
-                        : info.votes > 0
-                          ? '3px solid #28a745'
-                          : '2px solid rgba(255,255,255,0.2)',
-                      borderRadius: '12px',
-                      transition: 'all 0.3s ease',
-                      transform: info.isStoryteller ? 'scale(1.03)' : 'scale(1)',
-                      boxShadow: info.isStoryteller
-                        ? '0 8px 24px rgba(255,215,0,0.4)'
-                        : info.votes > 0
-                          ? '0 8px 24px rgba(40,167,69,0.2)'
-                          : '0 4px 12px rgba(0,0,0,0.15)',
-                      maxWidth: '100%',
-                      width: '100%'
-                    }}
+                    className={`reveal-card ${info.isStoryteller ? 'storyteller-card' : ''}`}
                   />
 
-                  <div style={{
-                    marginTop: '12px',
-                    background: 'rgba(255,255,255,0.15)',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    width: '100%',
-                    boxSizing: 'border-box'
-                  }}>
-                    <p style={{
-                      margin: '0 0 8px 0',
-                      fontWeight: 'bold',
-                      fontSize: 'clamp(14px, 3vw, 16px)',
-                      wordBreak: 'break-word'
-                    }}>
+                  <div className="reveal-card-info">
+                    <p className="player-name">
                       {info.playerName}
                     </p>
                     {info.votes > 0 && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '5px',
-                        fontSize: 'clamp(12px, 2.5vw, 14px)'
-                      }}>
-                        <span style={{ fontWeight: 'bold', color: '#28a745' }}>{info.votes}</span>
-                        <span>{info.votes === 1 ? 'Stimme' : 'Stimmen'}</span>
+                      <div className="votes-info">
+                        <span className="votes-count">{info.votes}</span>
+                        <span className="votes-label">{info.votes === 1 ? 'Stimme' : 'Stimmen'}</span>
                       </div>
                     )}
                   </div>
@@ -1885,14 +1133,8 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
             })}
           </div>
         ) : (
-          <div style={{
-            textAlign: 'center',
-            padding: '30px',
-            background: 'rgba(255,255,255,0.1)',
-            borderRadius: '12px',
-            marginBottom: '24px'
-          }}>
-            <p style={{color: 'white', marginBottom: '15px'}}>Lade Kartendaten...</p>
+          <div className="loading-reveal-message">
+            <p>Lade Kartendaten...</p>
             <button
               onClick={async () => {
                 try {
@@ -1919,14 +1161,7 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
                   console.error('Error recalculating reveal data:', error);
                 }
               }}
-              style={{
-                padding: '8px 16px',
-                background: 'rgba(255,255,255,0.2)',
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                cursor: 'pointer'
-              }}
+              className="refresh-reveal-data-button"
             >
               🔄 Ergebnisse laden
             </button>
@@ -1935,43 +1170,18 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
         {/* Punkteverteilung */}
         {pointsEarned && pointsEarned.length > 0 && (
-          <div style={{
-            background: 'rgba(255,255,255,0.15)',
-            padding: '15px',
-            borderRadius: '12px',
-            marginBottom: '20px',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <h4 style={{
-              margin: '0 0 15px 0',
-              fontSize: 'clamp(18px, 4vw, 22px)',
-              color: '#ffd700'
-            }}>
+          <div className="points-distribution">
+            <h4 className="points-title">
               🏆 Punkte in dieser Runde
             </h4>
 
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              gap: '10px'
-            }}>
+            <div className="points-list">
               {pointsEarned.map((item, index) => (
-                <div key={index} style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  padding: '10px 15px',
-                  borderRadius: '10px',
-                  minWidth: '140px'
-                }}>
-                  <p style={{ fontWeight: 'bold', margin: '0 0 5px 0' }}>{item.playerName}</p>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '5px'
-                  }}>
-                    <span style={{ fontWeight: 'bold', fontSize: '18px', color: '#28a745' }}>+{item.points}</span>
-                    <span style={{ fontSize: '12px', opacity: 0.8 }}>{item.reason}</span>
+                <div key={index} className="points-item">
+                  <p className="player-name">{item.playerName}</p>
+                  <div className="points-details">
+                    <span className="points-change">+{item.points}</span>
+                    <span className="points-reason">{item.reason}</span>
                   </div>
                 </div>
               ))}
@@ -1981,39 +1191,13 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
         {/* Countdown-Timer */}
         {revealTimer && (
-          <div style={{
-            marginTop: '20px'
-          }}>
+          <div className="countdown-timer">
             <button
               onClick={handleContinueToNextRound}
-              style={{
-                padding: '12px 24px',
-                fontSize: '18px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '30px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                transition: 'all 0.3s ease',
-                fontWeight: 'bold',
-                margin: '0 auto',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.transform = 'scale(1.05)';
-                e.target.style.backgroundColor = '#218838';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = 'scale(1)';
-                e.target.style.backgroundColor = '#28a745';
-              }}
+              className="continue-next-round-button"
             >
               <span>Nächste Runde</span>
-              <span style={{ fontSize: '14px' }}>(automatisch in 15s)</span>
+              <span className="countdown-timer-label">(automatisch in 15s)</span>
             </button>
           </div>
         )}
@@ -2036,73 +1220,29 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
     if (!gameWinner) return <div>Lade Spielergebnis...</div>;
 
     return (
-      <div style={{
-        padding: '20px',
-        background: 'linear-gradient(135deg, #ffd34f 0%, #ffb199 100%)',
-        borderRadius: '16px',
-        color: '#333',
-        textAlign: 'center'
-      }}>
-        <h2 style={{
-          margin: '0 0 20px 0',
-          fontSize: 'clamp(24px, 6vw, 32px)',
-          color: '#333'
-        }}>
+      <div className="game-end-phase">
+        <h2 className="game-end-title">
           🎉 Spiel beendet!
         </h2>
 
-        <div style={{
-          background: 'rgba(255,255,255,0.4)',
-          padding: '20px',
-          borderRadius: '12px',
-          marginBottom: '30px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{
-            margin: '0 0 10px 0',
-            fontSize: 'clamp(20px, 5vw, 26px)'
-          }}>
+        <div className="game-end-content">
+          <h3 className="winner-announcement">
             {gameWinner.winner} gewinnt! 🏆
           </h3>
 
           {/* Final Scores */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: '15px',
-            marginTop: '20px'
-          }}>
+          <div className="final-scores-grid">
             {gameWinner.finalScores.sort((a, b) => b.points - a.points).map(player => (
-              <div key={player.id} style={{
-                padding: '12px',
-                background: player.name === gameWinner.winner
-                  ? 'linear-gradient(135deg, #ffd700, #ffc107)'
-                  : 'rgba(255,255,255,0.3)',
-                borderRadius: '10px',
-                boxShadow: player.name === gameWinner.winner
-                  ? '0 6px 18px rgba(255,215,0,0.4)'
-                  : '0 4px 8px rgba(0,0,0,0.1)',
-                transform: player.name === gameWinner.winner ? 'scale(1.05)' : 'scale(1)',
-                transition: 'all 0.3s ease',
-                border: player.name === gameWinner.winner ? '2px solid #ff6f00' : 'none'
-              }}>
-                <div style={{
-                  fontWeight: 'bold',
-                  fontSize: 'clamp(14px, 3vw, 16px)',
-                  marginBottom: '5px',
-                  wordBreak: 'break-word'
-                }}>
+              <div key={player.id} className={`final-score-item ${player.name === gameWinner.winner ? 'winner' : ''}`}>
+                <div className="player-name">
                   {player.name === gameWinner.winner && '👑 '}
                   {player.name}
                 </div>
-                <div style={{
-                  fontSize: 'clamp(18px, 4vw, 24px)',
-                  fontWeight: 'bold'
-                }}>
+                <div className="player-points">
                   {player.points}
                 </div>
                 {player.name === gameWinner.winner && (
-                  <div style={{ marginTop: '5px', fontSize: '14px', fontWeight: 'bold', color: '#ff6f00' }}>
+                  <div className="winner-badge">
                     Gewinner!
                   </div>
                 )}
@@ -2113,28 +1253,7 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
         <button
           onClick={handleRestartGame}
-          style={{
-            padding: '15px 30px',
-            fontSize: '18px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '30px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-            transition: 'all 0.3s ease',
-            fontWeight: 'bold',
-            margin: '0 auto',
-            display: 'block'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.backgroundColor = '#0069d9';
-            e.target.style.transform = 'translateY(-2px)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.backgroundColor = '#007bff';
-            e.target.style.transform = 'translateY(0)';
-          }}
+          className="restart-game-button"
         >
           🔄 Neues Spiel starten
         </button>
@@ -2144,17 +1263,10 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
   // === MAIN RENDER ===
   if (!game) return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: 'white'
-    }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: '20px' }}>🎮</div>
-        <h2>Warte auf Spielstart...</h2>
+    <div className="loading-screen">
+      <div className="loading-content">
+        <div className="loading-icon">🎮</div>
+        <h2 className="loading-title">Warte auf Spielstart...</h2>
       </div>
     </div>
   );
@@ -2164,63 +1276,23 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: window.innerWidth < 768 ? '10px' : '20px',
-      position: 'relative'
-    }}>
+    <div className="game-container">
       {/* VolumeControl positioniert sich selbst */}
       <VolumeControl volume={volume} onChange={handleVolumeChange} />
 
-      <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: window.innerWidth < 768 ? '0 5px' : '0'
-      }}>
-        <div style={{
-          textAlign: 'center',
-          marginBottom: window.innerWidth < 768 ? '15px' : '25px',
-          background: 'rgba(255,255,255,0.1)',
-          padding: window.innerWidth < 768 ? '15px' : '20px',
-          borderRadius: '16px',
-          backdropFilter: 'blur(10px)',
-          color: 'white',
-          position: 'relative'
-        }}>
-          <h1 style={{
-            margin: '0 0 8px 0',
-            fontSize: 'clamp(20px, 6vw, 32px)',
-            textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-            wordBreak: 'break-word'
-          }}>
+      <div className="game-content">
+        <div className="game-header">
+          <h1 className="game-title">
             🎨 Don't Choose Me - {gameId}
           </h1>
-          <p style={{
-            margin: 0,
-            opacity: 0.9,
-            fontSize: 'clamp(12px, 3vw, 16px)',
-            wordBreak: 'break-word'
-          }}>
+          <p className="game-info">
             Spieler: <strong>{playerName}</strong> |
             Erzähler: <strong>{game?.players?.[game?.storytellerIndex]?.name}</strong>
           </p>
 
           {/* Audio Indicator - nur auf größeren Bildschirmen */}
           {window.innerWidth >= 768 && (
-            <div style={{
-              position: 'absolute',
-              top: '10px',
-              right: '15px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'rgba(255,255,255,0.1)',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '12px',
-              opacity: 0.7
-            }}>
+            <div className="audio-indicator">
               🎵 {game?.phase === 'voting' ? 'Voting Music' :
                   game?.phase === 'storytelling' ? 'Storyteller Music' : 'Lobby Music'}
             </div>
@@ -2230,11 +1302,7 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
         {/* Permanent scoreboard */}
         {game && game.state === 'playing' && renderScoreboard()}
 
-        <div style={{
-          background: 'rgba(255,255,255,0.05)',
-          borderRadius: '16px',
-          padding: window.innerWidth < 768 ? '10px' : '20px'
-        }}>
+        <div className="game-main">
           {phase === 'waiting' && renderWaitingPhase()}
           {phase === 'giveHint' && renderGiveHintPhase()}
           {phase === 'chooseCard' && renderChooseCardPhase()}
