@@ -219,10 +219,35 @@ const audioManager = {
    * @param {string} src - Pfad zur Sounddatei
    */
   playEffect(src) {
-    // src muss mit / beginnen und Datei muss in public/sounds liegen!
-    const audio = new window.Audio(src);
-    audio.volume = 0.02;
-    audio.play();
+    console.log(`🔊 AudioManager: Spiele Soundeffekt ab: ${src}`);
+    try {
+      // Erstelle einen neuen Audio-Instanz für jeden Effekt
+      const effectAudio = new Audio(src);
+      // Stelle sicher, dass die Lautstärke unabhängig von der Musikwiedergabe ist
+      effectAudio.volume = 0.08; // Etwas lauter für bessere Hörbarkeit
+
+      // Event-Listener hinzufügen, um Fehler zu erkennen
+      effectAudio.addEventListener('error', (error) => {
+        console.error(`❌ AudioManager: Fehler beim Abspielen des Soundeffekts ${src}:`, error);
+      });
+
+      // Event-Listener für erfolgreichen Start
+      effectAudio.addEventListener('playing', () => {
+        console.log(`✅ AudioManager: Soundeffekt ${src} wird abgespielt`);
+      });
+
+      // Play-Promise behandeln
+      const playPromise = effectAudio.play();
+
+      // Fehlerbehandlung für Browser, die Promise zurückgeben
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error(`❌ AudioManager: Promise-Fehler beim Abspielen von ${src}:`, error);
+        });
+      }
+    } catch (error) {
+      console.error(`❌ AudioManager: Allgemeiner Fehler beim Abspielen von ${src}:`, error);
+    }
   }
 };
 

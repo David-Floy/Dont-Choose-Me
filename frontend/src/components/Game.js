@@ -199,10 +199,17 @@ function Game({ playerName, gameId, onLeaveGame, volume, setVolume }) {
 
       if (response.ok) {
         const data = await response.json();
+
+        // Storyteller-Sound nur für Erzähler abspielen
         const storyteller = game?.players?.[game?.storytellerIndex];
-        if (storyteller?.name == playerName) {
-          audioManager.playEffect('frontend/public/sounds/storyteller.mp3');
+        if (storyteller?.name === playerName) {
+          console.log("📢 Erzähler spielt Sound ab: storyteller.mp3");
+          // Direkter Aufruf mit vollem Pfad und verzögerter Ausführung für bessere Zuverlässigkeit
+          setTimeout(() => {
+            audioManager.playEffect('/sounds/storyteller.mp3');
+          }, 100);
         }
+
         setSelectedCard(null);
         setHint('');
       } else {
